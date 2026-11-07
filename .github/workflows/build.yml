@@ -1,0 +1,55 @@
+name: build
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  bridge:
+    name: compile IPC bridge + smoke test
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Compile everything-ipc.exe
+        shell: pwsh
+        run: |
+          $csc = Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319\csc.exe'
+          if (-not (Test-Path $csc)) { throw "csc.exe not found at $csc" }
+          & $csc /nologo /target:exe /platform:anycpu /optimize+ `
+            /reference:System.Windows.Forms.dll /reference:System.Drawing.dll `
+            /out:mcp/everything-ipc.exe mcp/everything-ipc.cs
+          if ($LASTEXITCODE -ne 0) { throw "csc failed with $LASTEXITCODE" }
+
+      - name: Verify the bridge was produced
+        shell: pwsh
+        run: |
+          $exe = Get-Item mcp/everything-ipc.exe
+          "{0}  {1} bytes" -f $exe.Name, $exe.Length
+          Get-FileHash mcp/everything-ipc.exe -Algorithm SHA256 | Format-List
+
+      - name: Syntax check
+        shell: pwsh
+        run: |
+          node --check mcp/everything-mcp.mjs
+          node --check scripts/smoke.mjs
+
+      - name: Protocol smoke test
+        shell: pwsh
+        # Everything is not installed on CI; the smoke test only requires
+        # initialize + tools/list + a status call that reports it is unavailable.
+        run: node scripts/smoke.mjs
+
+      - name: Upload the bridge
+        uses: actions/upload-artifact@v4
+        with:
+          name: everything-ipc-win-anycpu
+          path: mcp/everything-ipc.exe
+          if-no-files-found: error

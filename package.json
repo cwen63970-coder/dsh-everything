@@ -1,0 +1,49 @@
+{
+  "name": "dsh-everything",
+  "version": "0.1.0",
+  "description": "Everything (voidtools) filename search for DeepSeek Harness — a Windows-only MCP bundle.",
+  "type": "module",
+  "exports": {
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg"
+  },
+  "files": [
+    "cordis.patch.yml",
+    "mcp",
+    "locale/*.json",
+    "icon.svg",
+    "README.md",
+    "README.zh-CN.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "deepseek-harness",
+    "everything",
+    "voidtools",
+    "search",
+    "windows",
+    "mcp"
+  ],
+  "license": "MIT",
+  "author": "cwen63970-coder",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cwen63970-coder/dsh-everything.git"
+  },
+  "homepage": "https://github.com/cwen63970-coder/dsh-everything#readme",
+  "bugs": {
+    "url": "https://github.com/cwen63970-coder/dsh-everything/issues"
+  },
+  "engines": {
+    "node": ">=20",
+    "dsh": ">=0.2.2-rc.1 <0.3.0"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml",
+      "platforms": ["win32"]
+    }
+  }
+}

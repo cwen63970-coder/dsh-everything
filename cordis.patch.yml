@@ -1,0 +1,38 @@
+# dsh-everything — bundle patch.
+#
+# 纯配置 bundle：不导出 Host 插件、不导出客户端代码，只把已经装好的
+# @deepseek-ai/dsh-mcp-client 挂上，指向本包自带的 mcp/everything-mcp.mjs。
+# 装完即用，不需要用户改任何配置。
+#
+# ── 关于「旧条目」────────────────────────────────────────────────────────────
+# 同一个 serverName 只允许一个 mcp-client 实例；第二个会抛
+# "serverName is already in use"。曾尝试在本 patch 里用 `- id: 旧条目 / disabled: true`
+# 自动关掉历史手工条目 —— 实测无效：bundle 层的 patch 只作用于本层可见的 entry 树，
+# 看不到用户层（profiles/<name>/cordis.patch.yml）里的行。
+# 因此：全新安装零操作；只有「装插件之前就手工配过 Everything MCP」的机器需要删掉旧行，
+# 这一条写进 README 的故障排查，不写进安装步骤。
+#
+# ── 挂载 ─────────────────────────────────────────────────────────────────────
+# 路径是唯一的技术点：patch 是静态 YAML，而 args 需要绝对路径。
+# Loader 的 !!js 表达式以 profile 目录（ctx.baseUrl）为锚点求值，因此可以拼出
+# node_modules/dsh-everything/mcp/...，不写死任何用户路径。
+#   - 表达式里不能出现 ": "（冒号+空格），YAML 会当成映射分隔符。
+#   - pathname 在 Windows 上是 /C:/... 形式，用 replace 剥掉前导斜杠。
+# command 用 process.execPath（DeepSeek Harness 自己）配 ELECTRON_RUN_AS_NODE=1：
+# Electron 可执行文件随即变成 Node 运行时，插件不依赖用户 PATH 里有没有 node。
+- insert:
+    - id: dsh-everything-mcp
+      name: '@deepseek-ai/dsh-mcp-client'
+      # Windows 限定：Everything 只有 Windows 版，桥也是 .NET/win32 的。
+      # 非 Windows 上让整条 entry 处于 disabled —— 不 spawn 子进程、不注册工具，
+      # 也不产生“启动失败”噪音。Loader 的 disabled 支持 !!js（Entry._resolveDisabled）。
+      disabled: !!js process.platform !== 'win32'
+      config:
+        serverName: everything
+        transport: stdio
+        command: !!js process.execPath
+        env:
+          ELECTRON_RUN_AS_NODE: '1'
+        args:
+          - !!js '(() => { const p = decodeURIComponent(new URL("node_modules/dsh-everything/mcp/everything-mcp.mjs", ctx.baseUrl).pathname); return p.replace(/^\/(?=[A-Za-z]:)/, ""); })()'
+        toolCallTimeoutMs: 120000
