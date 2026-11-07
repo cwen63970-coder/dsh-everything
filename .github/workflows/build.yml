@@ -23,9 +23,11 @@ jobs:
         run: |
           $csc = Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319\csc.exe'
           if (-not (Test-Path $csc)) { throw "csc.exe not found at $csc" }
+          # 路径必须用反斜杠：csc.exe v4 会把 mcp/xxx.cs 解析成 .\xxx.cs（丢掉目录段），
+          # 报 CS1504 "Source file could not be opened"。已在本地复现。
           & $csc /nologo /target:exe /platform:anycpu /optimize+ `
             /reference:System.Windows.Forms.dll /reference:System.Drawing.dll `
-            /out:mcp/everything-ipc.exe mcp/everything-ipc.cs
+            '/out:mcp\everything-ipc.exe' 'mcp\everything-ipc.cs'
           if ($LASTEXITCODE -ne 0) { throw "csc failed with $LASTEXITCODE" }
 
       - name: Verify the bridge was produced
