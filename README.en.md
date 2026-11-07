@@ -81,24 +81,9 @@ DSH --(MCP stdio)-->  mcp/everything-mcp.mjs  --(line JSON)-->  mcp/everything-i
 ```
 
 Everything's command line has no "search and print results" switch, which is why the bridge exists: zero
-dependencies, and it speaks Everything's own IPC protocol. Sources ship in `mcp/everything-ipc.cs`; rebuild with
-the .NET Framework compiler that ships with Windows:
-
-```powershell
-& "$env:WINDIR\Microsoft.NET\Framework64\v4.0.30319\csc.exe" /nologo /target:exe /platform:anycpu /optimize+ `
-  /reference:System.Windows.Forms.dll /reference:System.Drawing.dll `
-  '/out:everything-ipc.exe' 'everything-ipc.cs'
-```
-
-> [!NOTE]
-> `csc.exe` mishandles forward-slash paths: `mcp/everything-ipc.cs` resolves to `.\everything-ipc.cs` (CS1504).
-> Use backslashes.
-
-**Self-referencing path.** A patch is static YAML but `args` needs an absolute path. The Loader evaluates
-`!!js` expressions against the profile directory (`ctx.baseUrl`), so the row can point at
-`node_modules/dsh-everything/mcp/everything-mcp.mjs` without hard-coding any user path. Two traps:
-a `: ` (colon-space) inside the expression makes YAML parse it as a mapping, and `pathname` yields `/C:/…`
-on Windows (the expression strips that leading slash).
+dependencies, and it speaks Everything's own IPC protocol. Its source is `mcp/everything-ipc.cs`, which the
+packaged `everything-ipc.exe` is compiled from; the same build also runs on GitHub Actions — every push
+recompiles it from source on windows-latest and prints its SHA-256 in the log.
 
 **No dependency on `node` being on PATH.** `command` is `process.execPath` — DeepSeek Harness itself, which is
 Electron — with `env.ELECTRON_RUN_AS_NODE=1`. The host binary then behaves as a Node runtime (measured
@@ -119,13 +104,9 @@ Electron — with `env.ELECTRON_RUN_AS_NODE=1`. The host binary then behaves as 
 | Symptom | Cause / fix |
 |---|---|
 | `Everything is not running` | Start Everything; it owns the index |
-| `serverName "everything" is already in use` | Another mcp-client row uses the name — remove or rename the hand-written row |
+| A drive, USB disk or network location returns nothing | Everything indexes local NTFS volumes by default; add non-NTFS and network locations under Index → Folders |
 | Tools missing entirely | Check `everything_status`; confirm the profile lists `dsh-everything` in `dsh.profile.bundles` |
 | Empty results for a file you just created | `ntfs_volume_load_recent_changes` or a stale index; run `Everything.exe -reindex` |
-
-## Development
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for the protocol self-test, `link:` installs and CI.
 
 ## License
 

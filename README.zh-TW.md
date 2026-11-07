@@ -81,22 +81,8 @@ DSH --(MCP stdio)-->  mcp/everything-mcp.mjs  --(逐行 JSON)-->  mcp/everything
 ```
 
 Everything 內建的命令列沒有「搜尋並輸出結果」的開關，所以必須有這座橋梁：它零相依，直接實作 Everything 的
-IPC 協定，原始碼在 `mcp/everything-ipc.cs`，用 Windows 內建的 .NET Framework 編譯器即可重建：
-
-```powershell
-& "$env:WINDIR\Microsoft.NET\Framework64\v4.0.30319\csc.exe" /nologo /target:exe /platform:anycpu /optimize+ `
-  /reference:System.Windows.Forms.dll /reference:System.Drawing.dll `
-  '/out:everything-ipc.exe' 'everything-ipc.cs'
-```
-
-> [!NOTE]
-> `csc.exe` 對正斜線路徑有問題：`mcp/everything-ipc.cs` 會被解析成 `.\everything-ipc.cs`（回報 CS1504），
-> 路徑請使用反斜線。
-
-**自我參照路徑。** patch 是靜態 YAML，但 `args` 需要絕對路徑。Loader 的 `!!js` 運算式以 profile 目錄
-（`ctx.baseUrl`）為作用域求值，所以可以直接組出 `node_modules/dsh-everything/mcp/everything-mcp.mjs`，
-不必寫死任何使用者路徑。兩個坑：運算式裡出現 `: `（冒號+空格）會被 YAML 當成對應分隔符號；`pathname` 在
-Windows 上會得到 `/C:/…`，要去掉前導斜線。
+IPC 協定。原始碼在 `mcp/everything-ipc.cs`，套件裡的 `everything-ipc.exe` 就是它編譯出來的；同樣的編譯也在
+GitHub Actions 上跑——每次推送都會在 windows-latest 上從原始碼重新編譯一份，並在日誌裡印出它的 SHA-256。
 
 **不依賴 PATH 裡的 `node`。** `command` 使用 `process.execPath`（DeepSeek Harness 本身，即 Electron）搭配
 `env.ELECTRON_RUN_AS_NODE=1`，宿主執行檔隨即以 Node 執行環境運作（實測 `v24.21.0`），因此沒安裝獨立
@@ -117,13 +103,9 @@ Node 的機器也能使用。
 | 現象 | 原因 / 處理 |
 |---|---|
 | `Everything is not running` | 啟動 Everything；索引歸它所有 |
-| `serverName "everything" is already in use` | 已有另一筆 mcp-client 使用同名 server，請刪除或改名那筆手動設定 |
+| 某個磁碟、隨身碟或網路位置搜不到 | Everything 預設只索引本機 NTFS 磁碟區；非 NTFS 與網路位置要在 Everything 的「索引 → 資料夾」手動加入 |
 | 工具完全不出現 | 先看 `everything_status`；再確認 profile 的 `dsh.profile.bundles` 裡有 `dsh-everything` |
 | 剛建立的檔案搜不到 | `ntfs_volume_load_recent_changes` 設定或索引過期；執行 `Everything.exe -reindex` |
-
-## 開發
-
-見 [CONTRIBUTING.md](CONTRIBUTING.md)：本機協定自檢、`link:` 安裝、CI 流程。
 
 ## 授權條款
 

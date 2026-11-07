@@ -10,11 +10,11 @@
   "files": [
     "cordis.patch.yml",
     "mcp",
+    "scripts",
     "locale/*.json",
     "icon.svg",
     "assets/hero.png",
     "assets/everything-window.png",
-    "CONTRIBUTING.md",
     "README.md",
     "README.en.md",
     "README.zh-TW.md",
