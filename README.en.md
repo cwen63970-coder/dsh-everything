@@ -42,14 +42,15 @@ produce. No profile edits, no restart, no first-run choices.
 ## Requirements
 
 1. Windows 10/11.
-2. Everything installed and running. Recommended setup — the service indexes NTFS, the GUI stays unelevated:
-   ```powershell
-   & 'C:\Program Files (x86)\Everything\Everything.exe' -install-service          # admin, once
-   & 'C:\Program Files (x86)\Everything\Everything.exe' -install-run-on-system-startup
-   ```
-   Then untick **Run as administrator** in Everything's options and keep
-   `ntfs_volume_load_recent_changes=1,1,1` in `%APPDATA%\Everything\Everything.ini`
-   (with `0,0,0` Everything never replays the USN journal, so changes made while it was closed are lost).
+2. Everything installed and running — it owns the index. Recommended settings under **Tools → Options → General**:
+   - **Everything Service**: ticked (ticking it asks for elevation once, to install the service)
+   - **Run on system startup**: ticked
+   - **Run as administrator**: unticked
+
+   That way the service indexes NTFS and Everything itself stays a standard-user process: it is ready right after
+   boot, and programs launched from Everything do not inherit elevation. Running as administrator works too
+   (verified), but then the service is not needed and everything you open from Everything runs elevated; Windows 10+
+   also will not auto-start an elevated program, so leave it off if you want it at boot.
 3. DSH `0.2.2-rc.1` or a later `0.2.x`.
 
 ## Install
@@ -99,6 +100,11 @@ Electron — with `env.ELECTRON_RUN_AS_NODE=1`. The host binary then behaves as 
 | `\node_modules` | Matches the full path, so it hits that whole subtree; `node_modules` only hits entries named that |
 | `ext:exe` | Filter by extension. Type macros `exe:` / `doc:` / `pic:` are user-defined filters; undefined ones return zero silently |
 
+`everything_search` and `everything_count` also take four switches each: `regex` (treat `query` as a regular
+expression, in Everything's own dialect), `matchCase`, `wholeWord`, and `matchPath` (match the full path instead of
+just the file name). They apply to that one call only and are independent of the same-named toggles in Everything's
+GUI — with the GUI's regex mode on, plugin queries are still parsed as ordinary Everything syntax.
+
 ## Troubleshooting
 
 | Symptom | Cause / fix |
@@ -106,7 +112,8 @@ Electron — with `env.ELECTRON_RUN_AS_NODE=1`. The host binary then behaves as 
 | `Everything is not running` | Start Everything; it owns the index |
 | A drive, USB disk or network location returns nothing | Everything indexes local NTFS volumes by default; add non-NTFS and network locations under Index → Folders |
 | Tools missing entirely | Check `everything_status`; confirm the profile lists `dsh-everything` in `dsh.profile.bundles` |
-| Empty results for a file you just created | `ntfs_volume_load_recent_changes` or a stale index; run `Everything.exe -reindex` |
+| Empty results for a file you just created | Stale index, or the USN journal was not replayed at startup: check `ntfs_volume_load_recent_changes=1,1,1` in `%APPDATA%\Everything\Everything.ini` (`0,0,0` drops changes made while Everything was closed), or run `Everything.exe -reindex` |
+| A query times out with `no reply` | Everything is still rebuilding its index (`index loaded: false` in `everything_status`); wait for it to finish |
 
 ## License
 

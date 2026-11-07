@@ -42,14 +42,14 @@ Everything 在本机维护一个「全部卷、全部文件名」的索引。这
 ## 运行前提
 
 1. Windows 10/11；
-2. Everything 已安装并正在运行。推荐这样配置——由服务索引 NTFS，GUI 不需要提权：
-   ```powershell
-   & 'C:\Program Files (x86)\Everything\Everything.exe' -install-service          # 管理员，装一次
-   & 'C:\Program Files (x86)\Everything\Everything.exe' -install-run-on-system-startup
-   ```
-   然后在 Everything 选项里取消勾选 **Run as administrator**，并确认
-   `%APPDATA%\Everything\Everything.ini` 里 `ntfs_volume_load_recent_changes=1,1,1`
-   （写成 `0,0,0` 时启动不回放 USN 日志，关机期间的增删改永远补不进索引）；
+2. Everything 已安装并正在运行——索引归它所有。推荐在 **工具 → 选项 → 常规** 里设为这样：
+   - **Everything 服务**：勾选（首次勾选会请求一次管理员权限，用来装服务）
+   - **随系统自启动**：勾选
+   - **以管理员身份运行**：不勾选
+
+   这样由服务去索引 NTFS，Everything 本体保持普通权限：开机即可用，从 Everything 里打开的程序也不会跟着提权。
+   勾了最后一项也照样能用（实测），只是那时不再需要服务，而从 Everything 打开的程序都会提权；另外 Windows 10
+   起不会自动启动提权程序，想开机就用，就别勾它；
 3. DSH `0.2.2-rc.1` 或更新的 `0.2.x`。
 
 ## 安装
@@ -98,6 +98,8 @@ Node 的机器也能用。
 | `\node_modules` | 匹配完整路径，命中该目录子树；`node_modules` 只命中名字真的叫这个的项 |
 | `ext:exe` | 按扩展名过滤。类型宏 `exe:` / `doc:` / `pic:` 是用户自定义过滤器，没定义时静默返回 0 |
 
+`everything_search` 和 `everything_count` 还各带四个开关：`regex`（把 `query` 当正则，Everything 自己的正则方言）、`matchCase`、`wholeWord`、`matchPath`（匹配完整路径，而不是只匹配文件名）。它们只作用于这一次调用，与 Everything GUI 里的同名勾选框互不影响——GUI 的正则开关打开时，插件查询仍按普通语法解析。
+
 ## 疑难排解
 
 | 现象 | 原因 / 处理 |
@@ -105,7 +107,8 @@ Node 的机器也能用。
 | `Everything is not running` | 启动 Everything；索引归它所有 |
 | 某个盘、U 盘或网络位置搜不到 | Everything 默认只索引本地 NTFS 卷；非 NTFS 与网络位置要在 Everything 的「索引 → 文件夹」里手动添加 |
 | 工具完全不出现 | 先看 `everything_status`；再确认 profile 的 `dsh.profile.bundles` 里有 `dsh-everything` |
-| 刚建的文件搜不到 | `ntfs_volume_load_recent_changes` 设置或索引过期；执行 `Everything.exe -reindex` |
+| 刚建的文件搜不到 | 索引过期或启动时没回放 USN 日志：确认 `%APPDATA%\Everything\Everything.ini` 里 `ntfs_volume_load_recent_changes=1,1,1`（`0,0,0` 时关机期间的增删改补不进索引），或执行 `Everything.exe -reindex` |
+| 查询超时、报 `no reply` | Everything 正在重建索引，还没加载完（`everything_status` 里 `index loaded: false`）；等它加载完再查 |
 
 ## 许可证
 

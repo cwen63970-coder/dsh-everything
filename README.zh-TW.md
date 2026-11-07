@@ -42,14 +42,14 @@ Everything 會在本機維護一份「所有磁碟區、所有檔案名稱」的
 ## 執行前提
 
 1. Windows 10/11；
-2. Everything 已安裝且正在執行。建議這樣設定——由服務索引 NTFS，GUI 不需要提權：
-   ```powershell
-   & 'C:\Program Files (x86)\Everything\Everything.exe' -install-service          # 系統管理員，裝一次
-   & 'C:\Program Files (x86)\Everything\Everything.exe' -install-run-on-system-startup
-   ```
-   接著在 Everything 選項裡取消勾選 **Run as administrator**，並確認
-   `%APPDATA%\Everything\Everything.ini` 裡 `ntfs_volume_load_recent_changes=1,1,1`
-   （設成 `0,0,0` 時啟動不會回放 USN 日誌，關機期間的新增、刪除、修改永遠補不進索引）；
+2. Everything 已安裝且正在執行——索引歸它所有。建議在 **工具 → 選項 → 一般** 裡設成這樣：
+   - **Everything 服務**：勾選（第一次勾選會要求一次系統管理員權限，用來安裝服務）
+   - **隨系統自啟動**：勾選
+   - **以系統管理員身分執行**：不勾選
+
+   這樣由服務去索引 NTFS，Everything 本體保持一般權限：開機即可使用，從 Everything 裡開啟的程式也不會跟著提權。
+   勾了最後一項也照樣能用（實測），只是那時不再需要服務，而從 Everything 開啟的程式都會提權；另外 Windows 10
+   起不會自動啟動提權程式，想開機就用，就別勾它；
 3. DSH `0.2.2-rc.1` 或更新的 `0.2.x`。
 
 ## 安裝
@@ -98,6 +98,8 @@ Node 的機器也能使用。
 | `\node_modules` | 比對完整路徑，命中該目錄子樹；`node_modules` 只命中名稱真的是這個的項目 |
 | `ext:exe` | 依副檔名篩選。類型巨集 `exe:` / `doc:` / `pic:` 是使用者自訂的篩選器，未定義時默默回傳 0 筆 |
 
+`everything_search` 與 `everything_count` 還各帶四個開關：`regex`（把 `query` 當成正規表示式，Everything 自己的方言）、`matchCase`、`wholeWord`、`matchPath`（比對完整路徑，而不是只比對檔名）。它們只作用於這一次呼叫，與 Everything GUI 裡同名的勾選框互不影響——GUI 的正規表示式開關打開時，外掛查詢仍以一般語法解析。
+
 ## 疑難排解
 
 | 現象 | 原因 / 處理 |
@@ -105,7 +107,8 @@ Node 的機器也能使用。
 | `Everything is not running` | 啟動 Everything；索引歸它所有 |
 | 某個磁碟、隨身碟或網路位置搜不到 | Everything 預設只索引本機 NTFS 磁碟區；非 NTFS 與網路位置要在 Everything 的「索引 → 資料夾」手動加入 |
 | 工具完全不出現 | 先看 `everything_status`；再確認 profile 的 `dsh.profile.bundles` 裡有 `dsh-everything` |
-| 剛建立的檔案搜不到 | `ntfs_volume_load_recent_changes` 設定或索引過期；執行 `Everything.exe -reindex` |
+| 剛建立的檔案搜不到 | 索引過期或啟動時沒回放 USN 日誌：確認 `%APPDATA%\Everything\Everything.ini` 裡 `ntfs_volume_load_recent_changes=1,1,1`（`0,0,0` 時關機期間的新增、刪除、修改補不進索引），或執行 `Everything.exe -reindex` |
+| 查詢逾時、回報 `no reply` | Everything 正在重建索引，還沒載入完成（`everything_status` 裡 `index loaded: false`）；等它載入完再查 |
 
 ## 授權條款
 
