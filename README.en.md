@@ -27,7 +27,7 @@
 
 <div align="center">
 <br />
-<img src="assets/banner.svg" alt="dsh-everything" width="100%" />
+<img src="assets/hero.png" alt="dsh-everything：Everything 搜索结果与 agent 的工具调用" width="100%" />
 <br />
 </div>
 
@@ -106,7 +106,7 @@ Electron — with `env.ELECTRON_RUN_AS_NODE=1`. The host binary then behaves as 
 
 ## Query gotchas
 
-Only the three that bite most often; the full syntax lives in Everything's own help (Help → Search Syntax):
+**The full syntax is simply Everything's own search syntax.** The plugin hands `query` to Everything verbatim — it does not parse, whitelist or rewrite it, so anything you can type into Everything works here as well. These three bite most often:
 
 | Query | Meaning |
 |---|---|
@@ -125,20 +125,8 @@ Only the three that bite most often; the full syntax lives in Everything's own h
 
 ## Development
 
-```powershell
-# protocol smoke test (does not need Everything running)
-node scripts\smoke.mjs
-
-# local status
-node mcp\everything-mcp.mjs status
-
-# install your local checkout into a profile
-plugin_manager install_bundle   target=link:D:\dsh\projects\dsh-everything
-```
-
-CI runs on `windows-latest`: `csc` compiles the bridge → prints its SHA-256 → `node --check` → `scripts/smoke.mjs`
-→ uploads the artifact.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the protocol self-test, `link:` installs and CI.
 
 ## License
 
-MIT. Not affiliated with or endorsed by voidtools.
+MIT. Not affiliated with or endorsed by [voidtools](https://www.voidtools.com/), the official home of Everything.

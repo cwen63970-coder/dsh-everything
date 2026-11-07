@@ -27,7 +27,7 @@
 
 <div align="center">
 <br />
-<img src="assets/banner.svg" alt="dsh-everything" width="100%" />
+<img src="assets/hero.png" alt="dsh-everything：Everything 搜索结果与 agent 的工具调用" width="100%" />
 <br />
 </div>
 
@@ -104,7 +104,7 @@ Node 的机器也能用。
 
 ## 查询语法
 
-这里只列三条最容易踩的，完整语法见 Everything 自己的帮助（Help → Search Syntax）：
+**完整语法就是 Everything 自己的搜索语法。** 插件把 `query` 原样交给 Everything 解析——不解析、不白名单、不改写，所以能在 Everything 里写的任何写法都能直接写进 `query`。下面三条是最容易踩的：
 
 | 写法 | 含义 |
 |---|---|
@@ -123,19 +123,8 @@ Node 的机器也能用。
 
 ## 开发
 
-```powershell
-# 协议自检（不需要 Everything 在跑）
-node scripts\smoke.mjs
-
-# 本机状态
-node mcp\everything-mcp.mjs status
-
-# 本地改完直接装进 profile
-plugin_manager install_bundle   target=link:D:\dsh\projects\dsh-everything
-```
-
-CI 在 `windows-latest` 上跑：`csc` 编译桥 → 打印 SHA-256 → `node --check` → `scripts/smoke.mjs` → 上传产物。
+见 [CONTRIBUTING.md](CONTRIBUTING.md)：本地协议自检、`link:` 安装、CI 流程。
 
 ## 许可证
 
-MIT。与 voidtools 无隶属或背书关系。
+MIT。与 [voidtools](https://www.voidtools.com/)（Everything 的官方站点）无隶属或背书关系。
