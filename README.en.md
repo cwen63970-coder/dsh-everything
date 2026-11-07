@@ -39,9 +39,7 @@ a query comes back in milliseconds, without walking a directory tree and without
 Installing adds five tools named `mcp__everything__*` — the same names a hand-written MCP configuration would
 produce. No profile edits, no restart, no first-run choices.
 
-## Install
-
-**Requirements**
+## Requirements
 
 1. Windows 10/11.
 2. Everything installed and running. Recommended setup — the service indexes NTFS, the GUI stays unelevated:
@@ -54,7 +52,7 @@ produce. No profile edits, no restart, no first-run choices.
    (with `0,0,0` Everything never replays the USN journal, so changes made while it was closed are lost).
 3. DSH `0.2.2-rc.1` or a later `0.2.x`.
 
-**Install it**
+## Install
 
 ```text
 plugin_manager install_bundle   target=<npm spec> | github:<owner>/dsh-everything | link:<local path>

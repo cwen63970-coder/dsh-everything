@@ -39,9 +39,7 @@ Everything 會在本機維護一份「所有磁碟區、所有檔案名稱」的
 安裝完成後會多出 5 個工具，名稱都是 `mcp__everything__*`，與手動設定 MCP 的寫法完全一致。
 不需要改 profile、不需要重新啟動、首次使用也不需要做任何選擇。
 
-## 安裝
-
-**前提**
+## 執行前提
 
 1. Windows 10/11；
 2. Everything 已安裝且正在執行。建議這樣設定——由服務索引 NTFS，GUI 不需要提權：
@@ -54,7 +52,7 @@ Everything 會在本機維護一份「所有磁碟區、所有檔案名稱」的
    （設成 `0,0,0` 時啟動不會回放 USN 日誌，關機期間的新增、刪除、修改永遠補不進索引）；
 3. DSH `0.2.2-rc.1` 或更新的 `0.2.x`。
 
-**安裝**
+## 安裝
 
 ```text
 plugin_manager install_bundle   target=<npm 套件名> | github:<owner>/dsh-everything | link:<本機路徑>
