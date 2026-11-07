@@ -105,9 +105,9 @@ Node 的机器也能用。
 | 现象 | 原因 / 处理 |
 |---|---|
 | `Everything is not running` | 启动 Everything；索引归它所有 |
-| 某个盘、U 盘或网络位置搜不到 | Everything 默认只索引本地 NTFS 卷；非 NTFS 与网络位置要在 Everything 的「索引 → 文件夹」里手动添加 |
+| 某个盘、U 盘或网络位置搜不到 | 都在 **工具 → 选项** 里改。默认只索引本地 NTFS 固定卷：NTFS 格式的 U 盘/移动硬盘 →「索引 → NTFS」勾「自动包含新增的可移动卷」；FAT 格式（exFAT / FAT32）→「索引 → 文件夹」把盘符加进去（Everything 1.5 则在「索引 → FAT」里勾同样的选项）；网络位置 → 同样走「索引 → 文件夹」 |
 | 工具完全不出现 | 先看 `everything_status`；再确认 profile 的 `dsh.profile.bundles` 里有 `dsh-everything` |
-| 刚建的文件搜不到 | 索引过期或启动时没回放 USN 日志：确认 `%APPDATA%\Everything\Everything.ini` 里 `ntfs_volume_load_recent_changes=1,1,1`（`0,0,0` 时关机期间的增删改补不进索引），或执行 `Everything.exe -reindex` |
+| 刚建的文件搜不到 | 先确认该卷在索引里、且勾了「监控变化」（非 NTFS 与网络位置要单独添加）；Everything 正在重建索引时也查不到，等 `index loaded: true`；仍不行则执行 `Everything.exe -reindex` |
 | 查询超时、报 `no reply` | Everything 正在重建索引，还没加载完（`everything_status` 里 `index loaded: false`）；等它加载完再查 |
 
 ## 许可证

@@ -110,9 +110,9 @@ GUI — with the GUI's regex mode on, plugin queries are still parsed as ordinar
 | Symptom | Cause / fix |
 |---|---|
 | `Everything is not running` | Start Everything; it owns the index |
-| A drive, USB disk or network location returns nothing | Everything indexes local NTFS volumes by default; add non-NTFS and network locations under Index → Folders |
+| A drive, USB disk or network location returns nothing | All of it lives under **Tools → Options**. Only local fixed NTFS volumes are indexed by default: NTFS USB disks → **Index → NTFS**, tick *Automatically include new removable volumes*; FAT (exFAT / FAT32) → **Index → Folders**, add the drive letter (on Everything 1.5 tick the same option under **Index → FAT**); network locations → **Index → Folders** as well |
 | Tools missing entirely | Check `everything_status`; confirm the profile lists `dsh-everything` in `dsh.profile.bundles` |
-| Empty results for a file you just created | Stale index, or the USN journal was not replayed at startup: check `ntfs_volume_load_recent_changes=1,1,1` in `%APPDATA%\Everything\Everything.ini` (`0,0,0` drops changes made while Everything was closed), or run `Everything.exe -reindex` |
+| Empty results for a file you just created | Check that the volume is indexed and **Monitor changes** is ticked (non-NTFS and network locations must be added separately); while Everything is rebuilding its index the file is not there either — wait for `index loaded: true`; otherwise run `Everything.exe -reindex` |
 | A query times out with `no reply` | Everything is still rebuilding its index (`index loaded: false` in `everything_status`); wait for it to finish |
 
 ## License

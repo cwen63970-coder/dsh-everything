@@ -105,9 +105,9 @@ Node 的機器也能使用。
 | 現象 | 原因 / 處理 |
 |---|---|
 | `Everything is not running` | 啟動 Everything；索引歸它所有 |
-| 某個磁碟、隨身碟或網路位置搜不到 | Everything 預設只索引本機 NTFS 磁碟區；非 NTFS 與網路位置要在 Everything 的「索引 → 資料夾」手動加入 |
+| 某個磁碟、隨身碟或網路位置搜不到 | 都在 **工具 → 選項** 裡改。預設只索引本機 NTFS 固定磁碟區：NTFS 格式的隨身碟／行動硬碟 →「索引 → NTFS」勾「自動包含新增的可移動卷」；FAT 格式（exFAT / FAT32）→「索引 → 資料夾」把磁碟機代號加進去（Everything 1.5 則在「索引 → FAT」勾同樣的選項）；網路位置 → 同樣走「索引 → 資料夾」 |
 | 工具完全不出現 | 先看 `everything_status`；再確認 profile 的 `dsh.profile.bundles` 裡有 `dsh-everything` |
-| 剛建立的檔案搜不到 | 索引過期或啟動時沒回放 USN 日誌：確認 `%APPDATA%\Everything\Everything.ini` 裡 `ntfs_volume_load_recent_changes=1,1,1`（`0,0,0` 時關機期間的新增、刪除、修改補不進索引），或執行 `Everything.exe -reindex` |
+| 剛建立的檔案搜不到 | 先確認該磁碟區在索引裡、且勾了「監控變更」（非 NTFS 與網路位置要單獨加入）；Everything 正在重建索引時也查不到，等 `index loaded: true`；仍不行則執行 `Everything.exe -reindex` |
 | 查詢逾時、回報 `no reply` | Everything 正在重建索引，還沒載入完成（`everything_status` 裡 `index loaded: false`）；等它載入完再查 |
 
 ## 授權條款
