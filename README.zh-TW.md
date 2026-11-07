@@ -1,16 +1,72 @@
+<div align="center">
+
 [简体中文](README.md) · [English](README.en.md) · **繁體中文**
 
 # dsh-everything
 
-把 [Everything](https://www.voidtools.com/) 的檔案名稱索引接進 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)
-的 **bundle 外掛**。
+### 把 Everything 的檔案名稱索引接進 DeepSeek Harness，裝完即用的一個 bundle。
 
-**僅限 Windows**：Everything 本身是 Windows 程式，IPC 橋梁也是一個小的 .NET 執行檔。
+**毫秒級找到任何檔案——不用逐一走訪資料夾，不用記得它在哪個磁碟。**
 
-## 它做什麼
+[![build](https://github.com/cwen63970-coder/dsh-everything/actions/workflows/build.yml/badge.svg)](https://github.com/cwen63970-coder/dsh-everything/actions/workflows/build.yml)
+[![release](https://img.shields.io/badge/release-v0.1.0-2f6feb?style=flat-square)](https://github.com/cwen63970-coder/dsh-everything/releases)
+[![platform](https://img.shields.io/badge/platform-Windows%2010%2F11-0078D6?style=flat-square&logo=windows&logoColor=white)](#執行前提)
+[![DSH](https://img.shields.io/badge/DSH-%E2%89%A5%200.2.2--rc.1-4B32C3?style=flat-square)](#執行前提)
+[![MCP tools](https://img.shields.io/badge/MCP-5%20tools-orange?style=flat-square)](#它能做什麼)
+[![license](https://img.shields.io/badge/license-MIT-f4c430?style=flat-square)](LICENSE)
 
-透過 `@deepseek-ai/dsh-mcp-client` 註冊 5 個 MCP 工具（`mcp__everything__*`），查詢直接落到機器上既有的
-Everything 索引，毫秒級回傳，不需要逐一走訪資料夾：
+[安裝](#安裝) · [它能做什麼](#它能做什麼) · [運作原理](#運作原理) · [查詢語法](#查詢語法) · [疑難排解](#疑難排解)
+
+<code>plugin_manager install_bundle&nbsp;&nbsp;target=github:cwen63970-coder/dsh-everything</code>
+
+</div>
+
+> [!IMPORTANT]
+> **僅限 Windows。** Everything 本身是 Windows 程式，IPC 橋梁也是一個小的 .NET 執行檔。
+> Everything 必須已安裝且**正在執行**——索引歸它所有，此外掛只是查詢方。
+
+<div align="center">
+<br />
+<img src="assets/banner.svg" alt="dsh-everything" width="100%" />
+<br />
+</div>
+
+---
+
+Everything 會在本機維護一份「所有磁碟區、所有檔案名稱」的索引。這個外掛把它交到代理手上：一次查詢幾毫秒回傳，
+不需要走訪目錄樹，也不依賴任何雲端服務。
+
+安裝完成後會多出 5 個工具，名稱都是 `mcp__everything__*`，與手動設定 MCP 的寫法完全一致。
+不需要改 profile、不需要重新啟動、首次使用也不需要做任何選擇。
+
+## 安裝
+
+**前提**
+
+1. Windows 10/11；
+2. Everything 已安裝且正在執行。建議這樣設定——由服務索引 NTFS，GUI 不需要提權：
+   ```powershell
+   & 'C:\Program Files (x86)\Everything\Everything.exe' -install-service          # 系統管理員，裝一次
+   & 'C:\Program Files (x86)\Everything\Everything.exe' -install-run-on-system-startup
+   ```
+   接著在 Everything 選項裡取消勾選 **Run as administrator**，並確認
+   `%APPDATA%\Everything\Everything.ini` 裡 `ntfs_volume_load_recent_changes=1,1,1`
+   （設成 `0,0,0` 時啟動不會回放 USN 日誌，關機期間的新增、刪除、修改永遠補不進索引）；
+3. DSH `0.2.2-rc.1` 或更新的 `0.2.x`。
+
+**安裝**
+
+```text
+plugin_manager install_bundle   target=<npm 套件名> | github:<owner>/dsh-everything | link:<本機路徑>
+```
+
+外掛的 patch 會自行插入 mcp-client 那筆設定、算出套件內服務端的絕對路徑、註冊工具。載入器對新項目是熱生效的，
+所以裝完立即可用。
+
+外掛在 manifest 裡宣告了 `dsh.bundle.platforms: ["win32"]`，在 Linux / macOS 上宿主會**整體略過**它，
+而不是在 spawn 階段報錯。
+
+## 它能做什麼
 
 | 工具 | 用途 |
 |---|---|
@@ -20,12 +76,14 @@ Everything 索引，毫秒級回傳，不需要逐一走訪資料夾：
 | `everything_recent` | 最近修改的項目（`dm:lastNdays`） |
 | `everything_duplicates` | 同名的檔案 |
 
+## 運作原理
+
 ```
 DSH --(MCP stdio)-->  mcp/everything-mcp.mjs  --(逐行 JSON)-->  mcp/everything-ipc.exe  --(WM_COPYDATA)-->  Everything.exe
 ```
 
 Everything 內建的命令列沒有「搜尋並輸出結果」的開關，所以必須有這座橋梁：它零相依，直接實作 Everything 的
-IPC 協定。原始碼在 `mcp/everything-ipc.cs`，可用 Windows 內建的 .NET Framework 編譯器重建：
+IPC 協定，原始碼在 `mcp/everything-ipc.cs`，用 Windows 內建的 .NET Framework 編譯器即可重建：
 
 ```powershell
 & "$env:WINDIR\Microsoft.NET\Framework64\v4.0.30319\csc.exe" /nologo /target:exe /platform:anycpu /optimize+ `
@@ -33,35 +91,9 @@ IPC 協定。原始碼在 `mcp/everything-ipc.cs`，可用 Windows 內建的 .NE
   '/out:everything-ipc.exe' 'everything-ipc.cs'
 ```
 
+> [!NOTE]
 > `csc.exe` 對正斜線路徑有問題：`mcp/everything-ipc.cs` 會被解析成 `.\everything-ipc.cs`（回報 CS1504），
 > 路徑請使用反斜線。
-
-## 執行前提
-
-1. Windows 10/11；
-2. Everything 已安裝且**正在執行**——索引歸它所有，此外掛只是查詢方。建議設定：
-   ```powershell
-   & 'C:\Program Files (x86)\Everything\Everything.exe' -install-service          # 系統管理員，裝一次
-   & 'C:\Program Files (x86)\Everything\Everything.exe' -install-run-on-system-startup
-   ```
-   接著在 Everything 選項裡取消勾選 **Run as administrator**；並保持
-   `%APPDATA%\Everything\Everything.ini` 裡 `ntfs_volume_load_recent_changes=1,1,1`——設成 `0,0,0` 時
-   Everything 啟動不會回放 USN 日誌，關機期間的新增、刪除、修改永遠不會補進索引。
-3. DSH `0.2.2-rc.1` 或更新的 `0.2.x`。
-
-## 安裝
-
-```text
-plugin_manager install_bundle   target=<npm 套件名> | github:<owner>/dsh-everything | link:<本機路徑>
-```
-
-裝完即可使用：外掛的 patch 會自行插入 mcp-client 那筆設定、算出套件內服務端的絕對路徑、註冊工具。不需要手動改設定，
-也不需要重新啟動（載入器對新項目是熱生效的）。
-
-外掛在 manifest 裡宣告了 `dsh.bundle.platforms: ["win32"]`，因此在 Linux / macOS 上宿主會**整體略過**這個
-bundle，而不是在 spawn 階段報錯。
-
-## 兩個關鍵實作細節
 
 **自我參照路徑。** patch 是靜態 YAML，但 `args` 需要絕對路徑。Loader 的 `!!js` 運算式以 profile 目錄
 （`ctx.baseUrl`）為作用域求值，所以可以直接組出 `node_modules/dsh-everything/mcp/everything-mcp.mjs`，
@@ -72,20 +104,39 @@ Windows 上會得到 `/C:/…`，要去掉前導斜線。
 `env.ELECTRON_RUN_AS_NODE=1`，宿主執行檔隨即以 Node 執行環境運作（實測 `v24.21.0`），因此沒安裝獨立
 Node 的機器也能使用。
 
+## 查詢語法
+
+這裡只列三條最容易踩到的，完整語法見 Everything 自己的說明（Help → Search Syntax）：
+
+| 寫法 | 含義 |
+|---|---|
+| `dm:last7days` | 最近 7 天。直接寫 `dm:7days` **不是**這個意思，會默默比對到無關的舊檔案 |
+| `\node_modules` | 比對完整路徑，命中該目錄子樹；`node_modules` 只命中名稱真的是這個的項目 |
+| `ext:exe` | 依副檔名篩選。類型巨集 `exe:` / `doc:` / `pic:` 是使用者自訂的篩選器，未定義時默默回傳 0 筆 |
+
 ## 疑難排解
 
 | 現象 | 原因 / 處理 |
 |---|---|
-| `Everything is not running` | 啟動 Everything；索引歸它所有。 |
-| `serverName "everything" is already in use` | 已有另一筆 mcp-client 使用同名 server，請刪除或改名那筆手動設定。 |
-| 工具完全不出現 | 先看 `everything_status`；再確認 profile 的 `dsh.profile.bundles` 裡有 `dsh-everything`。 |
-| 剛建立的檔案搜不到 | `ntfs_volume_load_recent_changes` 設定或索引過期；執行 `Everything.exe -reindex`。 |
+| `Everything is not running` | 啟動 Everything；索引歸它所有 |
+| `serverName "everything" is already in use` | 已有另一筆 mcp-client 使用同名 server，請刪除或改名那筆手動設定 |
+| 工具完全不出現 | 先看 `everything_status`；再確認 profile 的 `dsh.profile.bundles` 裡有 `dsh-everything` |
+| 剛建立的檔案搜不到 | `ntfs_volume_load_recent_changes` 設定或索引過期；執行 `Everything.exe -reindex` |
 
-## 語法提醒
+## 開發
 
-- 日期位移必須帶前綴：`dm:last7days` 才是「最近 7 天」，`dm:7days` 會默默比對到無關的舊檔案；
-- 前導反斜線才會比對完整路徑：`\node_modules` 命中該目錄子樹，`node_modules` 只命中名稱；
-- 類型巨集 `exe:` / `doc:` / `pic:` 是使用者自訂的篩選器，未定義時會默默回傳 0 筆，請改用 `ext:exe`。
+```powershell
+# 協定自檢（不需要 Everything 在執行）
+node scripts\smoke.mjs
+
+# 本機狀態
+node mcp\everything-mcp.mjs status
+
+# 本機改完直接裝進 profile
+plugin_manager install_bundle   target=link:D:\dsh\projects\dsh-everything
+```
+
+CI 在 `windows-latest` 上執行：`csc` 編譯橋梁 → 印出 SHA-256 → `node --check` → `scripts/smoke.mjs` → 上傳產物。
 
 ## 授權條款
 

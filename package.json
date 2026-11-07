@@ -12,6 +12,7 @@
     "mcp",
     "locale/*.json",
     "icon.svg",
+    "assets/banner.svg",
     "README.md",
     "README.en.md",
     "README.zh-TW.md",
