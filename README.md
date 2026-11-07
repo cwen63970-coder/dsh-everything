@@ -1,101 +1,92 @@
+**简体中文** · [English](README.en.md) · [繁體中文](README.zh-TW.md)
+
 # dsh-everything
 
-[Everything](https://www.voidtools.com/) filename search for [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness),
-packaged as a DSH bundle.
+把 [Everything](https://www.voidtools.com/) 的文件名索引接进 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)
+的 **bundle 插件**。
 
-**Windows only.** Everything itself is a Windows application, and the IPC bridge is a small .NET binary.
+**仅 Windows**：Everything 本身是 Windows 程序，IPC 桥也是一个小的 .NET 可执行文件。
 
-Chinese documentation: [README.zh-CN.md](README.zh-CN.md)
+## 它做什么
 
-## What it does
+通过 `@deepseek-ai/dsh-mcp-client` 注册 5 个 MCP 工具（`mcp__everything__*`），查询直接落到机器上已有的
+Everything 索引，毫秒级返回，不需要遍历目录：
 
-Registers five MCP tools (`mcp__everything__*`) through `@deepseek-ai/dsh-mcp-client`. Every query goes to a
-prebuilt index that already exists on the machine, so lookups return in milliseconds without walking directories:
-
-| Tool | Purpose |
+| 工具 | 用途 |
 |---|---|
-| `everything_search` | Full Everything query syntax: name, path, size, date, wildcards, regex, `dupe:`, `empty:`, … |
-| `everything_count` | Count matches without transferring rows |
-| `everything_status` | Is Everything running / index loaded / elevated |
-| `everything_recent` | Recently modified items (`dm:lastNdays`) |
-| `everything_duplicates` | Names that occur more than once |
+| `everything_search` | 完整 Everything 查询语法：名称、路径、大小、日期、通配符、正则、`dupe:`、`empty:` … |
+| `everything_count` | 只统计命中数，不传输结果行 |
+| `everything_status` | Everything 是否在运行 / 索引是否就绪 / 是否提权 |
+| `everything_recent` | 最近修改的项（`dm:lastNdays`） |
+| `everything_duplicates` | 重名文件 |
 
 ```
-DSH --(MCP stdio)-->  mcp/everything-mcp.mjs  --(line JSON)-->  mcp/everything-ipc.exe  --(WM_COPYDATA)-->  Everything.exe
+DSH --(MCP stdio)-->  mcp/everything-mcp.mjs  --(逐行 JSON)-->  mcp/everything-ipc.exe  --(WM_COPYDATA)-->  Everything.exe
 ```
 
-`everything-ipc.exe` is a zero-dependency C# bridge that speaks Everything's own IPC protocol. Everything's
-command line has no "search and print results" switch, which is why a bridge is needed at all. Sources ship in
-`mcp/everything-ipc.cs`; rebuild with the .NET Framework compiler that ships with Windows:
+Everything 自带的命令行没有「搜索并输出结果」的开关，所以必须有这座桥：它零依赖，直接实现 Everything 的
+IPC 协议。源码在 `mcp/everything-ipc.cs`，可以用 Windows 自带的 .NET Framework 编译器重建：
 
 ```powershell
 & "$env:WINDIR\Microsoft.NET\Framework64\v4.0.30319\csc.exe" /nologo /target:exe /platform:anycpu /optimize+ `
   /reference:System.Windows.Forms.dll /reference:System.Drawing.dll `
-  /out:everything-ipc.exe everything-ipc.cs
+  '/out:everything-ipc.exe' 'everything-ipc.cs'
 ```
 
-## Requirements
+> `csc.exe` 对正斜杠路径有坑：`mcp/everything-ipc.cs` 会被解析成 `.\everything-ipc.cs`（报 CS1504），
+> 路径请用反斜杠。
 
-1. Windows 10/11.
-2. Everything installed and **running**. The index belongs to Everything; this bundle only queries it.
-   Recommended setup — the service indexes NTFS volumes, the GUI does not need elevation:
+## 运行前提
+
+1. Windows 10/11；
+2. Everything 已安装并**正在运行**——索引归它所有，本插件只是查询方。推荐配置：
    ```powershell
-   & 'C:\Program Files (x86)\Everything\Everything.exe' -install-service          # admin, once
+   & 'C:\Program Files (x86)\Everything\Everything.exe' -install-service          # 管理员，装一次
    & 'C:\Program Files (x86)\Everything\Everything.exe' -install-run-on-system-startup
    ```
-   Then untick **Run as administrator** in Everything's options, and keep
-   `ntfs_volume_load_recent_changes=1,1,1` in `%APPDATA%\Everything\Everything.ini` — with `0,0,0` Everything
-   never replays the USN journal, so changes made while it was closed are missing from the index forever.
-3. DSH `0.2.2-rc.1` or a later `0.2.x`.
+   然后在 Everything 选项里取消勾选 **Run as administrator**；并保持
+   `%APPDATA%\Everything\Everything.ini` 里 `ntfs_volume_load_recent_changes=1,1,1`——写成 `0,0,0` 时
+   Everything 启动不回放 USN 日志，关机期间的增删改永远不会补进索引。
+3. DSH `0.2.2-rc.1` 或更新的 `0.2.x`。
 
-## Install
+## 安装
 
 ```text
-plugin_manager install_bundle   target=<npm spec> | github:<owner>/dsh-everything | link:<local path>
+plugin_manager install_bundle   target=<npm 包名> | github:<owner>/dsh-everything | link:<本地路径>
 ```
 
-Installing is all that is needed: the bundle's patch inserts the MCP client row, computes the absolute path to
-its own server inside the profile, and registers the tools. No manual configuration, no restart (the loader
-hot-applies new entries).
+装完即用：插件的 patch 会自己插入 mcp-client 那条配置、算出包内服务端的绝对路径、注册工具。不需要手工改配置，
+也不需要重启（加载器对新条目是热生效的）。
 
-The plugin also declares `dsh.bundle.platforms: ["win32"]`, so on Linux or macOS the whole bundle is skipped by
-the host instead of failing at spawn time.
+插件在 manifest 里声明了 `dsh.bundle.platforms: ["win32"]`，所以在 Linux / macOS 上宿主会**整体跳过**这个
+bundle，而不是在 spawn 阶段报错。
 
-## How the two tricky bits work
+## 两个关键实现点
 
-**Self-referencing path.** A patch is static YAML but `args` needs an absolute path. The Loader evaluates
-`!!js` expressions against the profile directory (`ctx.baseUrl`), so the row can point at
-`node_modules/dsh-everything/mcp/everything-mcp.mjs` without hard-coding any user path. Two traps:
-a `: ` (colon-space) inside the expression makes YAML parse it as a mapping, and `pathname` yields `/C:/…`
-on Windows (the expression strips that leading slash).
+**自引用路径。** patch 是静态 YAML，但 `args` 需要绝对路径。Loader 的 `!!js` 表达式以 profile 目录
+（`ctx.baseUrl`）为作用域求值，所以可以直接拼出 `node_modules/dsh-everything/mcp/everything-mcp.mjs`，
+不写死任何用户路径。两个坑：表达式里出现 `: `（冒号+空格）会被 YAML 当成映射分隔符；`pathname` 在 Windows
+上会得到 `/C:/…`，要把前导斜杠去掉。
 
-**No dependency on `node` being on PATH.** `command` is `process.execPath` — DeepSeek Harness itself, which is
-Electron — with `env.ELECTRON_RUN_AS_NODE=1`. The host binary then behaves as a Node runtime (measured
-`v24.21.0` here), so the plugin works on machines without a standalone Node install.
+**不依赖 PATH 里的 `node`。** `command` 用 `process.execPath`（DeepSeek Harness 自己，即 Electron）配
+`env.ELECTRON_RUN_AS_NODE=1`，宿主可执行文件随即作为 Node 运行时工作（实测 `v24.21.0`），因此没装独立
+Node 的机器也能用。
 
-## Verified facts (Windows, DSH 0.2.2-rc.1, Everything 1.4.1.1032)
+## 故障排查
 
-- **`!!js` in a bundle patch is evaluated with the profile directory as `ctx.baseUrl`** — verified by the
-  server starting from `…/profiles/desktop/node_modules/dsh-everything/mcp/everything-mcp.mjs`.
-- **Bundle patches cannot reach the user layer.** A `- id: <existing user row>` + `disabled: true` inside a
-  bundle patch is ignored, so a bundle cannot retire a hand-written row that uses the same `serverName`.
-- **`serverName` is released only when its instance is disposed.** Deleting an entry and hot-reloading leaves
-  the name reserved until the host process exits; renaming the entry releases it immediately. Migration
-  therefore is: rename the old row → point the plugin at the same name → delete the old row, all without a restart.
-- **Everything's `dm:` offsets need a prefix.** `dm:last7days` is the last seven days; `dm:7days` silently
-  matches unrelated old files.
-- **Type macros are user-defined.** `exe:`, `doc:`, `pic:` … return zero results unless the user defined those
-  filters; use `ext:exe` instead.
-
-## Troubleshooting
-
-| Symptom | Cause / fix |
+| 现象 | 原因 / 处理 |
 |---|---|
-| `Everything is not running` | Start Everything; it owns the index. |
-| `serverName "everything" is already in use` | Another mcp-client row already uses the name — remove or rename the hand-written row. |
-| Tools missing entirely | Check `everything_status`; also confirm the profile lists `dsh-everything` in `dsh.profile.bundles`. |
-| Empty results for a file you just created | `ntfs_volume_load_recent_changes` or a stale index; run `Everything.exe -reindex`. |
+| `Everything is not running` | 启动 Everything；索引归它所有。 |
+| `serverName "everything" is already in use` | 已有另一条 mcp-client 用了同名 server，删掉或改名那条手工配置。 |
+| 工具完全不出现 | 先看 `everything_status`；再确认 profile 的 `dsh.profile.bundles` 里有 `dsh-everything`。 |
+| 刚建的文件搜不到 | `ntfs_volume_load_recent_changes` 设置或索引过期；执行 `Everything.exe -reindex`。 |
 
-## License
+## 语法提醒
 
-MIT. Not affiliated with or endorsed by voidtools.
+- 日期偏移必须带前缀：`dm:last7days` 才是「最近 7 天」，`dm:7days` 会静默匹配到无关的旧文件；
+- 前导反斜杠才匹配完整路径：`\node_modules` 命中该目录子树，`node_modules` 只命中名字；
+- 类型宏 `exe:` / `doc:` / `pic:` 是用户自定义过滤器，没定义时静默返回 0，请用 `ext:exe`。
+
+## 许可证
+
+MIT。与 voidtools 无隶属或背书关系。
