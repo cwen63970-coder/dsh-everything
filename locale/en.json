@@ -1,6 +1,6 @@
 {
   "meta": {
     "title": "Everything search",
-    "description": "Find files and folders across local volumes by name, path, size, or date through the Everything index. Windows only."
+    "description": "Locate files and folders by name, path, size or date on the volumes Everything has indexed. Read-only, no file contents; results depend on index scope and rebuild state. Windows only."
   }
 }

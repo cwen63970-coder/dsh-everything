@@ -1,6 +1,6 @@
 {
   "name": "dsh-everything",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Everything (voidtools) filename search for DeepSeek Harness — a Windows-only MCP bundle.",
   "type": "module",
   "exports": {
@@ -47,7 +47,9 @@
   "dsh": {
     "bundle": {
       "patch": "./cordis.patch.yml",
-      "platforms": ["win32"]
+      "platforms": [
+        "win32"
+      ]
     }
   }
 }

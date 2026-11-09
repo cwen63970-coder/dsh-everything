@@ -4,9 +4,9 @@
 
 # dsh-everything
 
-### Everything's filename index, wired into DeepSeek Harness as a bundle you install and forget.
+### Everything's filename index, exposed to DeepSeek Harness as a read-only lookup plugin.
 
-**Find any file in milliseconds — no directory walking, no remembering which drive it lives on.**
+**Locate any indexed file or folder in one query — paths and metadata only, no content reads, no writes.**
 
 [![build](https://github.com/cwen63970-coder/dsh-everything/actions/workflows/build.yml/badge.svg)](https://github.com/cwen63970-coder/dsh-everything/actions/workflows/build.yml)
 [![release](https://img.shields.io/badge/release-v0.1.0-2f6feb?style=flat-square)](https://github.com/cwen63970-coder/dsh-everything/releases)
@@ -15,9 +15,9 @@
 [![MCP tools](https://img.shields.io/badge/MCP-5%20tools-orange?style=flat-square)](#what-it-does)
 [![license](https://img.shields.io/badge/license-MIT-f4c430?style=flat-square)](LICENSE)
 
-[Install](#install) · [What it does](#what-it-does) · [How it works](#how-it-works) · [Query gotchas](#query-gotchas) · [Troubleshooting](#troubleshooting)
+[Install](#install) · [Requirements](#requirements) · [What it does](#what-it-does) · [Limits](#limits) · [How it works](#how-it-works) · [Query gotchas](#query-gotchas) · [Troubleshooting](#troubleshooting)
 
-<code>plugin_manager install_bundle&nbsp;&nbsp;target=github:cwen63970-coder/dsh-everything</code>
+<code>Plugins → Install a third-party plugin: https://github.com/cwen63970-coder/dsh-everything</code>
 
 </div>
 
@@ -27,17 +27,34 @@
 
 <div align="center">
 <br />
-<img src="assets/hero.png" alt="dsh-everything：Everything 搜索结果与 agent 的工具调用" width="100%" />
+<img src="assets/hero.png" alt="dsh-everything: Everything search results and the agent's tool call" width="100%" />
 <br />
 </div>
 
 ---
 
-Everything keeps an index of every filename on every local volume. This bundle hands that index to the agent:
-a query comes back in milliseconds, without walking a directory tree and without any cloud service.
+## Install
 
-Installing adds five tools named `mcp__everything__*` — the same names a hand-written MCP configuration would
-produce. No profile edits, no restart, no first-run choices.
+In DSH open **Plugins → Install a third-party plugin**, then put the repository URL into **Add plugin**:
+
+```text
+https://github.com/cwen63970-coder/dsh-everything
+```
+
+`github:cwen63970-coder/dsh-everything` works as well — the same field also takes an npm package name or a local
+directory. Click **Install**. `dsh-everything` then appears under *Installed plugins*, and the five
+`mcp__everything__*` tools are available immediately: the patch inserts the mcp-client row itself and resolves its
+own server path inside the profile, so nothing needs a restart.
+
+> [!NOTE]
+> The manifest declares `dsh.bundle.platforms: ["win32"]`, so on Linux or macOS the host skips the whole bundle
+> instead of failing at spawn time.
+
+From the command line the equivalent is:
+
+```text
+plugin_manager install_bundle   target=github:cwen63970-coder/dsh-everything
+```
 
 ## Requirements
 
@@ -51,29 +68,47 @@ produce. No profile edits, no restart, no first-run choices.
    boot, and programs launched from Everything do not inherit elevation. Running as administrator works too
    (verified), but then the service is not needed and everything you open from Everything runs elevated; Windows 10+
    also will not auto-start an elevated program, so leave it off if you want it at boot.
+
+   **The index scope is Everything's too**: local fixed NTFS volumes only by default; USB disks and network
+   locations are added inside Everything (see [Troubleshooting](#troubleshooting)).
 3. DSH `0.2.2-rc.1` or a later `0.2.x`.
 
-## Install
-
-```text
-plugin_manager install_bundle   target=<npm spec> | github:<owner>/dsh-everything | link:<local path>
-```
-
-The bundle's patch inserts the MCP client row, computes the absolute path to its own server inside the profile,
-and registers the tools. The loader hot-applies new entries, so it works immediately.
-
-The manifest declares `dsh.bundle.platforms: ["win32"]`, so on Linux or macOS the host skips the whole bundle
-instead of failing at spawn time.
-
 ## What it does
+
+It fills the "where is this file?" gap for the agent. Everything's local index is exposed as five MCP tools,
+so the model can look up candidates by name, path, extension, size, date or regex across **every indexed
+volume** in one query, and get back paths plus metadata.
 
 | Tool | Purpose |
 |---|---|
 | `everything_search` | Full Everything query syntax: name, path, size, date, wildcards, regex, `dupe:`, `empty:`, … |
 | `everything_count` | Count matches without transferring rows |
 | `everything_status` | Is Everything running / index loaded / elevated |
-| `everything_recent` | Recently modified items (`dm:lastNdays`) |
+| `everything_recent` | Recently modified files (`dm:lastNdays`) |
 | `everything_duplicates` | Names that occur more than once |
+
+This removes three pain points of native tooling: guessing a root directory and walking it with `glob`;
+scanning a drive with `Get-ChildItem -Recurse` (minutes, and often blocked by permissions); and hand-rolling
+size/date/extension filters. Tool names match a hand-written MCP configuration (`mcp__everything__*`), so no
+profile edits are needed.
+
+## What it does not do
+
+- **No content search** — it returns paths, sizes and timestamps, never file contents. Use `read` / `grep`.
+- **No writes** — it never modifies files or Everything's configuration.
+- **No index of its own** — the index belongs to Everything; this plugin only queries it.
+- **No proof of absence** — an empty result means "not in the current index", not "does not exist".
+  Out-of-scope volumes and an in-progress rebuild both cause misses; `everything_status` reports `index busy`.
+
+## Limits
+
+| Dimension | Reality |
+|---|---|
+| Coverage | Only what Everything indexes. Default is local fixed NTFS volumes; FAT/exFAT, removable and network locations must be added in Everything |
+| Completeness | Depends on index state. While `everything_status` reports `index busy`, results can be badly incomplete (measured: 66 vs 6,769 items for the same path) |
+| Speed | Milliseconds for ordinary name lookups; seconds for size/date sorting, a large `max`, or `duplicates` scans over tens of thousands of rows |
+| Data flow | Lookups run locally with no third-party search service, but returned paths and metadata enter the conversation context |
+| Platform | Windows only; Everything must be installed and running |
 
 ## How it works
 
@@ -111,7 +146,7 @@ GUI — with the GUI's regex mode on, plugin queries are still parsed as ordinar
 |---|---|
 | `Everything is not running` | Start Everything; it owns the index |
 | A drive, USB disk or network location returns nothing | All of it lives under **Tools → Options**. Only local fixed NTFS volumes are indexed by default: NTFS USB disks → **Index → NTFS**, tick *Automatically include new removable volumes*; FAT (exFAT / FAT32) → **Index → Folders**, add the drive letter (on Everything 1.5 tick the same option under **Index → FAT**); network locations → **Index → Folders** as well |
-| Tools missing entirely | Check `everything_status`; confirm the profile lists `dsh-everything` in `dsh.profile.bundles` |
+| Tools missing entirely | Check `everything_status`; confirm *Plugins → Installed plugins* lists `dsh-everything` |
 | Empty results for a file you just created | Check that the volume is indexed and **Monitor changes** is ticked (non-NTFS and network locations must be added separately); while Everything is rebuilding its index the file is not there either — wait for `index loaded: true`; otherwise run `Everything.exe -reindex` |
 | A query times out with `no reply` | Everything is still rebuilding its index (`index loaded: false` in `everything_status`); wait for it to finish |
 

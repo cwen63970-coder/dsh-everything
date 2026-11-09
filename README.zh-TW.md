@@ -4,20 +4,20 @@
 
 # dsh-everything
 
-### 把 Everything 的檔案名稱索引接進 DeepSeek Harness，裝完即用的一個 bundle。
+### 把 Everything 的檔案名稱索引接進 DeepSeek Harness 的唯讀檢索外掛。
 
-**毫秒級找到任何檔案——不用逐一走訪資料夾，不用記得它在哪個磁碟。**
+**一次查詢定位已索引的檔案或資料夾——回傳路徑與中繼資料，不讀內容、不改檔案。**
 
 [![build](https://github.com/cwen63970-coder/dsh-everything/actions/workflows/build.yml/badge.svg)](https://github.com/cwen63970-coder/dsh-everything/actions/workflows/build.yml)
 [![release](https://img.shields.io/badge/release-v0.1.0-2f6feb?style=flat-square)](https://github.com/cwen63970-coder/dsh-everything/releases)
 [![platform](https://img.shields.io/badge/platform-Windows%2010%2F11-0078D6?style=flat-square&logo=windows&logoColor=white)](#執行前提)
 [![DSH](https://img.shields.io/badge/DSH-%E2%89%A5%200.2.2--rc.1-4B32C3?style=flat-square)](#執行前提)
-[![MCP tools](https://img.shields.io/badge/MCP-5%20tools-orange?style=flat-square)](#它能做什麼)
+[![MCP tools](https://img.shields.io/badge/MCP-5%20tools-orange?style=flat-square)](#它的作用)
 [![license](https://img.shields.io/badge/license-MIT-f4c430?style=flat-square)](LICENSE)
 
-[安裝](#安裝) · [它能做什麼](#它能做什麼) · [運作原理](#運作原理) · [查詢語法](#查詢語法) · [疑難排解](#疑難排解)
+[安裝](#安裝) · [執行前提](#執行前提) · [它的作用](#它的作用) · [能力邊界](#能力邊界) · [運作原理](#運作原理) · [查詢語法](#查詢語法) · [疑難排解](#疑難排解)
 
-<code>plugin_manager install_bundle&nbsp;&nbsp;target=github:cwen63970-coder/dsh-everything</code>
+<code>外掛 → 安裝第三方外掛：https://github.com/cwen63970-coder/dsh-everything</code>
 
 </div>
 
@@ -27,17 +27,33 @@
 
 <div align="center">
 <br />
-<img src="assets/hero.png" alt="dsh-everything：Everything 搜索结果与 agent 的工具调用" width="100%" />
+<img src="assets/hero.png" alt="dsh-everything：Everything 搜尋結果與 agent 的工具呼叫" width="100%" />
 <br />
 </div>
 
 ---
 
-Everything 會在本機維護一份「所有磁碟區、所有檔案名稱」的索引。這個外掛把它交到代理手上：一次查詢幾毫秒回傳，
-不需要走訪目錄樹，也不依賴任何雲端服務。
+## 安裝
 
-安裝完成後會多出 5 個工具，名稱都是 `mcp__everything__*`，與手動設定 MCP 的寫法完全一致。
-不需要改 profile、不需要重新啟動、首次使用也不需要做任何選擇。
+在 DSH 裡打開 **外掛 → 安裝第三方外掛**，在「新增外掛」的「套件名稱或位址」填入倉庫網址：
+
+```text
+https://github.com/cwen63970-coder/dsh-everything
+```
+
+也可以填簡寫 `github:cwen63970-coder/dsh-everything`（同一欄位也接受 npm 套件名稱與本機目錄），然後按「安裝」。
+裝完後「已安裝外掛」裡會出現 `dsh-everything`，5 個 `mcp__everything__*` 工具立即可用——外掛的 patch 會自行
+插入 mcp-client 設定、算出套件內伺服器的絕對路徑，不需要重新啟動。
+
+> [!NOTE]
+> 外掛在 manifest 裡宣告了 `dsh.bundle.platforms: ["win32"]`，Linux / macOS 上宿主會**整體略過**它，
+> 而不是在 spawn 階段報錯。
+
+習慣用指令的話，等價寫法是：
+
+```text
+plugin_manager install_bundle   target=github:cwen63970-coder/dsh-everything
+```
 
 ## 執行前提
 
@@ -50,29 +66,45 @@ Everything 會在本機維護一份「所有磁碟區、所有檔案名稱」的
    這樣由服務去索引 NTFS，Everything 本體保持一般權限：開機即可使用，從 Everything 裡開啟的程式也不會跟著提權。
    勾了最後一項也照樣能用（實測），只是那時不再需要服務，而從 Everything 開啟的程式都會提權；另外 Windows 10
    起不會自動啟動提權程式，想開機就用，就別勾它；
+
+   **索引範圍也歸 Everything 管**：預設只索引本機 NTFS 固定磁碟區，隨身碟／行動硬碟／網路位置要在它裡面
+   單獨加入（見[疑難排解](#疑難排解)）。
 3. DSH `0.2.2-rc.1` 或更新的 `0.2.x`。
 
-## 安裝
+## 它的作用
 
-```text
-plugin_manager install_bundle   target=<npm 套件名> | github:<owner>/dsh-everything | link:<本機路徑>
-```
-
-外掛的 patch 會自行插入 mcp-client 那筆設定、算出套件內服務端的絕對路徑、註冊工具。載入器對新項目是熱生效的，
-所以裝完立即可用。
-
-外掛在 manifest 裡宣告了 `dsh.bundle.platforms: ["win32"]`，在 Linux / macOS 上宿主會**整體略過**它，
-而不是在 spawn 階段報錯。
-
-## 它能做什麼
+給代理補上「檔案在哪」這一環：把 Everything 的本機索引包裝成 5 個 MCP 工具，讓模型依名稱、路徑、
+副檔名、大小、日期或正規表示式，在**全部已索引的磁碟區**上一次查詢拿到候選路徑與中繼資料。
 
 | 工具 | 用途 |
 |---|---|
 | `everything_search` | 完整 Everything 查詢語法：名稱、路徑、大小、日期、萬用字元、正規表示式、`dupe:`、`empty:` … |
-| `everything_count` | 只統計命中數量，不回傳結果列 |
+| `everything_count` | 只統計命中數，不傳輸結果列 |
 | `everything_status` | Everything 是否在執行 / 索引是否就緒 / 是否提權 |
-| `everything_recent` | 最近修改的項目（`dm:lastNdays`） |
-| `everything_duplicates` | 同名的檔案 |
+| `everything_recent` | 最近修改的檔案（`dm:lastNdays`） |
+| `everything_duplicates` | 重名檔案 |
+
+對模型來說，這解決了原生手段的三個痛點：不用猜根目錄、逐層 `glob`；不用 `Get-ChildItem -Recurse`
+掃碟（分鐘級，還會被權限打斷）；不用自己拼大小/日期/副檔名的組合篩選。工具名稱與手動設定 MCP 的寫法一致
+（`mcp__everything__*`），不用改 profile。
+
+## 它不做什麼
+
+- **不讀檔案內容**——只回傳路徑、大小、時間等中繼資料；要看內容請用 `read` / `grep`。
+- **不寫檔案、不改 Everything 設定**——所有呼叫都是唯讀查詢。
+- **不維護自己的索引**——索引歸 Everything，外掛只是查詢方。
+- **不能證明「檔案不存在」**——空結果只說明「目前索引裡沒有」。索引範圍外、索引重建中、未監控的磁碟區
+  都會造成假陰性；`everything_status` 會回報 `index busy`。
+
+## 能力邊界
+
+| 維度 | 實際情況 |
+|---|---|
+| 覆蓋範圍 | 僅 Everything 已索引的內容。預設是本機 NTFS 固定磁碟區；FAT/exFAT、可移動磁碟、網路位置需在 Everything 裡單獨加入 |
+| 結果完整性 | 依賴索引狀態。`everything_status` 顯示 `index busy` 時結果可能大幅缺失（實測同一路徑 66 筆 vs 6,769 筆） |
+| 速度 | 一般按名查詢毫秒級；按大小/日期排序、`max` 很大、或 `duplicates` 掃描數萬列時會到秒級 |
+| 資料流向 | 檢索在本機完成，不經過第三方搜尋服務；但**回傳的路徑與中繼資料會進入對話上下文** |
+| 平台 | 僅 Windows；Everything 必須已安裝並正在執行 |
 
 ## 運作原理
 
@@ -98,7 +130,7 @@ Node 的機器也能使用。
 | `\node_modules` | 比對完整路徑，命中該目錄子樹；`node_modules` 只命中名稱真的是這個的項目 |
 | `ext:exe` | 依副檔名篩選。類型巨集 `exe:` / `doc:` / `pic:` 是使用者自訂的篩選器，未定義時默默回傳 0 筆 |
 
-`everything_search` 與 `everything_count` 還各帶四個開關：`regex`（把 `query` 當成正規表示式，Everything 自己的方言）、`matchCase`、`wholeWord`、`matchPath`（比對完整路徑，而不是只比對檔名）。它們只作用於這一次呼叫，與 Everything GUI 裡同名的勾選框互不影響——GUI 的正規表示式開關打開時，外掛查詢仍以一般語法解析。
+`everything_search` 與 `everything_count` 還各帶四個開關：`regex`（把 `query` 當成正規表示式）、`matchCase`、`wholeWord`、`matchPath`（比對完整路徑，而不是只比對檔名）。它們只作用於這一次呼叫，與 Everything GUI 裡同名的勾選框互不影響——GUI 的正規表示式開關打開時，外掛查詢仍以一般語法解析。
 
 ## 疑難排解
 
@@ -106,7 +138,7 @@ Node 的機器也能使用。
 |---|---|
 | `Everything is not running` | 啟動 Everything；索引歸它所有 |
 | 某個磁碟、隨身碟或網路位置搜不到 | 都在 **工具 → 選項** 裡改。預設只索引本機 NTFS 固定磁碟區：NTFS 格式的隨身碟／行動硬碟 →「索引 → NTFS」勾「自動包含新增的可移動卷」；FAT 格式（exFAT / FAT32）→「索引 → 資料夾」把磁碟機代號加進去（Everything 1.5 則在「索引 → FAT」勾同樣的選項）；網路位置 → 同樣走「索引 → 資料夾」 |
-| 工具完全不出現 | 先看 `everything_status`；再確認 profile 的 `dsh.profile.bundles` 裡有 `dsh-everything` |
+| 工具完全不出現 | 先看 `everything_status`；再確認「外掛 → 已安裝外掛」裡有 `dsh-everything` |
 | 剛建立的檔案搜不到 | 先確認該磁碟區在索引裡、且勾了「監控變更」（非 NTFS 與網路位置要單獨加入）；Everything 正在重建索引時也查不到，等 `index loaded: true`；仍不行則執行 `Everything.exe -reindex` |
 | 查詢逾時、回報 `no reply` | Everything 正在重建索引，還沒載入完成（`everything_status` 裡 `index loaded: false`）；等它載入完再查 |
 

@@ -12,9 +12,9 @@
 // which is exactly why the IPC route is required.
 //
 // Modes:
-//   node mcp-server.mjs          -> MCP stdio server
-//   node mcp-server.mjs status   -> human-readable health check
-//   node mcp-server.mjs search <query> [--max N] [--sort S]
+//   node everything-mcp.mjs         -> MCP stdio server
+//   node everything-mcp.mjs status  -> human-readable health check
+//   node everything-mcp.mjs search <query> [options]   (see the usage text below)
 
 import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
@@ -54,6 +54,7 @@ class Bridge {
     this.buffer = "";
     this.pending = [];
     this.starting = null;
+    this.queue = Promise.resolve();
   }
 
   async start() {
@@ -133,8 +134,23 @@ class Bridge {
     for (const waiter of waiters) waiter.reject(error);
   }
 
+  /**
+   * Queue one command behind the previous one, then run it.
+   *
+   * The bridge answers with one unterminated-by-id JSON line per request, so
+   * replies are matched by order alone: two commands in flight could swap
+   * results. A timeout also has to drop the child to resync that stream, which
+   * under concurrency would take unrelated queries down with it. Serialising
+   * keeps both failure modes local to the request that caused them.
+   */
+  request(command, timeoutMs = 60000) {
+    const run = () => this._requestOnce(command, timeoutMs);
+    this.queue = this.queue.then(run, run);
+    return this.queue;
+  }
+
   /** Send one command and await its single-line JSON reply. */
-  async request(command, timeoutMs = 60000) {
+  async _requestOnce(command, timeoutMs = 60000) {
     await this.start();
 
     return new Promise((resolve, reject) => {
@@ -180,16 +196,24 @@ const bridge = new Bridge();
  * Bound on how many characters a single tool result may return. A query can match
  * tens of thousands of rows, and an unbounded reply would be truncated by the
  * transport instead of by us -- losing the summary and the truncation notice.
+ *
+ * 40k characters is roughly 10-15k tokens: large enough for a full page of paths,
+ * small enough that one call cannot eat a quarter of the model's context.
  */
-const MAX_RESULT_CHARS = 120000;
+const MAX_RESULT_CHARS = 40000;
 
 function clampText(text) {
   if (text.length <= MAX_RESULT_CHARS) return text;
-  const kept = text.slice(0, MAX_RESULT_CHARS);
+  // Cut on a line boundary: half a path at the tail reads like a real path, and
+  // a model will happily report the fragment as a file that exists.
+  let cut = text.lastIndexOf("\n", MAX_RESULT_CHARS);
+  if (cut <= 0) cut = MAX_RESULT_CHARS;
+  const kept = text.slice(0, cut);
   const droppedChars = text.length - kept.length;
   const droppedLines = text.split("\n").length - kept.split("\n").length;
   return `${kept}\n\n[output truncated: ${droppedChars} more characters ` +
-    `(~${droppedLines} lines) were dropped. Narrow the query, lower max, or raise offset.]`;
+    `(~${droppedLines} lines) were dropped. Use everything_count for a total, ` +
+    `narrow the query, page with offset, or lower max.]`;
 }
 
 function formatSize(bytes) {
@@ -220,39 +244,76 @@ function formatHit(item, index) {
   return `${String(index + 1).padStart(3)}. [${kind}] ${item.fullPath}${suffix}`;
 }
 
-function summarize(payload, heading) {
-  const lines = [];
+/**
+ * Render one page, shrinking it until it fits the tool budget.
+ *
+ * Rows are dropped from the *end* and every count is recomputed from the rows that
+ * actually survive, so the "showing N of M" line, the visible rows and the next
+ * `offset` always agree. Cutting characters afterwards would print a page size the
+ * text does not contain -- and an offset that skips rows the caller never saw.
+ */
+function summarize(payload, heading, warning) {
+  const items = Array.isArray(payload.results) ? payload.results : [];
+  const offset = payload.offset ?? 0;
 
-  // Truncation is a correctness hazard, not a formatting detail: a truncated list
-  // reads like "these are all the matches", so the warning goes FIRST, where a
-  // model skimming the result cannot miss it.
-  const shownTo = (payload.offset ?? 0) + payload.returned;
-  const truncated = payload.total > shownTo;
-  if (truncated) {
-    const remaining = payload.total - shownTo;
-    lines.push(
-      `INCOMPLETE RESULT SET — this is NOT the complete list.`,
-      `${payload.total} items match; showing ${payload.returned} ` +
-      `(${shownTo} of ${payload.total}), ${remaining} not shown.`,
-      `To get the complete set: page with offset=${shownTo}, or narrow the query so it matches ` +
-      `${payload.returned} or fewer items. Do not report this list as complete.`,
-      "",
-    );
+  const render = (rows) => {
+    const lines = [];
+
+    // Anything that makes the list untrustworthy goes above the list, where a model
+    // skimming the result cannot miss it: first a stale-index warning, then the
+    // truncation notice.
+    if (warning) lines.push(warning, "");
+
+    const shownTo = offset + rows.length;
+    const truncated = payload.total > shownTo;
+    const outOfRange = offset > 0 && offset >= payload.total;
+    if (truncated) {
+      const remaining = payload.total - shownTo;
+      lines.push(
+        `INCOMPLETE RESULT SET — this is NOT the complete list.`,
+        `${payload.total} items match; showing ${rows.length} ` +
+        `(${shownTo} of ${payload.total}), ${remaining} not shown.`,
+        `To get the complete set: page with offset=${shownTo}, or narrow the query so it matches ` +
+        `${rows.length} or fewer items. Do not report this list as complete.`,
+        "",
+      );
+    }
+
+    lines.push(`${heading}: ${payload.total} match${payload.total === 1 ? "" : "es"}`);
+
+    if (outOfRange) {
+      // Otherwise this reads exactly like "the query matched nothing", which is a
+      // different claim from "you paged past the end".
+      lines.push(
+        payload.total === 0
+          ? `offset=${offset} cannot be used: the query matched nothing.`
+          : `offset=${offset} is past the end: only ${payload.total} ` +
+            `item${payload.total === 1 ? "" : "s"} match, so valid offsets are 0-${payload.total - 1}.`,
+      );
+    } else if (rows.length === 0) {
+      lines.push("(no rows transferred)");
+    } else {
+      rows.forEach((item, index) => lines.push(formatHit(item, index)));
+    }
+
+    if (truncated) {
+      lines.push("", `... ${payload.total - shownTo} further matches are NOT listed above; ` +
+        `use offset=${shownTo} to continue.`);
+    }
+    return lines;
+  };
+
+  // Largest prefix of the page that still fits the budget. Rendering grows with the
+  // row count, so a binary search lands on the exact cut in ~log2(300) renders
+  // instead of stepping down by fractions and wasting part of the budget.
+  let low = 0;
+  let high = items.length;
+  while (low < high) {
+    const mid = Math.ceil((low + high) / 2);
+    if (render(items.slice(0, mid)).join("\n").length <= MAX_RESULT_CHARS) low = mid;
+    else high = mid - 1;
   }
-
-  lines.push(`${heading}: ${payload.total} match${payload.total === 1 ? "" : "es"}`);
-
-  if (payload.returned === 0) {
-    lines.push("(no rows transferred)");
-  } else {
-    payload.results.forEach((item, index) => lines.push(formatHit(item, index)));
-  }
-
-  if (truncated) {
-    lines.push("", `... ${payload.total - shownTo} further matches are NOT listed above; ` +
-      `use offset=${shownTo} to continue.`);
-  }
-  return lines.join("\n");
+  return render(items.slice(0, low)).join("\n");
 }
 
 // ------------------------------------------------------------------- tools
@@ -264,8 +325,11 @@ const TOOLS = [
       "PRIMARY TOOL for locating files and folders by name, extension, path, size, or date.\n" +
       "Reach for this FIRST whenever the user wants to find where a file is, when you do not " +
       "already know an exact path, or when the target may lie outside the working directory. " +
-      "It queries a prebuilt index of every local volume, so it returns in milliseconds and needs " +
-      "no directory walking.\n\n" +
+      "It queries a prebuilt index of the volumes Everything has indexed, so a name lookup comes " +
+      "back immediately and needs no directory walking.\n\n" +
+      "Returns paths, sizes and timestamps only — never file contents; use read/grep for those. " +
+      "An empty result means 'not in the current index', not 'does not exist': volumes Everything " +
+      "does not index, and an in-progress rebuild, both cause misses (everything_status says so).\n\n" +
       "Use `glob` instead when you must have an exact, complete, workspace-relative enumeration " +
       "(glob never truncates; it spills an oversized list to a file and gives you the path). " +
       "everything_search returns a top-N page and says so loudly when it is incomplete.\n\n" +
@@ -317,9 +381,10 @@ const TOOLS = [
         },
         max: {
           type: "integer",
-          description: "Rows to return (default 50, max 1000). The true hit count is always reported separately.",
+          description: "Rows to return (default 50, max 300). The true hit count is always reported separately; " +
+            "use everything_count when you only need the number.",
           minimum: 1,
-          maximum: 1000,
+          maximum: 300,
         },
         offset: {
           type: "integer",
@@ -410,10 +475,10 @@ const TOOLS = [
 
 // ---------------------------------------------------------------- handlers
 
-function buildQueryOptions(args) {
+function buildQueryOptions(args, maxCap = 300) {
   const options = {
     search: args.query ?? "",
-    max: Math.min(Math.max(args.max ?? 50, 1), 1000),
+    max: Math.min(Math.max(args.max ?? 50, 1), maxCap),
     offset: Math.max(args.offset ?? 0, 0),
     sort: args.sort ?? "name_asc",
     matchPath: args.matchPath === true,
@@ -438,22 +503,38 @@ function requireOk(payload) {
   return payload;
 }
 
-async function handleSearch(args) {
-  const options = buildQueryOptions(args);
-  const payload = requireOk(await bridge.request({ cmd: "search", ...options }));
+/**
+ * One cheap state read before a query, because Everything answers from a partial
+ * database while it rebuilds the index and reports nothing. Measured: a query that
+ * returns 6,769 rows on a settled index returned 66 during a rebuild. Marking the
+ * result beats letting a model conclude the files are gone.
+ */
+async function indexWarning() {
+  try {
+    const payload = await bridge.request({ cmd: "version" }, 8000);
+    if (payload?.ok === true && payload.dbBusy === true) {
+      return "⚠ Everything is rebuilding its index right now — these results may be incomplete.";
+    }
+  } catch {
+    // The query that follows reports the real failure; do not mask it with this.
+  }
+  return null;
+}
 
-  let results = payload.results;
-
-  // file:/folder: already filter server-side when the model used them, but the
-  // explicit switches are easier to reach for and cheap to apply here.
-  if (args.foldersOnly === true) results = results.filter((r) => r.isFolder);
-  if (args.filesOnly === true) results = results.filter((r) => !r.isFolder);
-
-  const shown = { ...payload, results, returned: results.length };
-  return summarize(shown, `Everything search "${options.search}"`);
+async function handleSearch(args, { maxCap = 300 } = {}) {
+  const options = buildQueryOptions(args, maxCap);
+  // file:/folder: are filters inside the index. Applying them to an already-paged
+  // slice instead would break paging: short or empty pages, and an offset that no
+  // longer addresses the rows the caller thinks it does.
+  const prefix = args.foldersOnly === true ? "folder:" : args.filesOnly === true ? "file:" : "";
+  const search = prefix ? `${prefix} ${options.search}` : options.search;
+  const warning = await indexWarning();
+  const payload = requireOk(await bridge.request({ cmd: "search", ...options, search }));
+  return summarize(payload, `Everything search "${search}"`, warning);
 }
 
 async function handleCount(args) {
+  const warning = await indexWarning();
   const payload = requireOk(await bridge.request({
     cmd: "count",
     search: args.query ?? "",
@@ -462,7 +543,8 @@ async function handleCount(args) {
     regex: args.regex === true,
   }));
   const noun = payload.total === 1 ? "item" : "items";
-  return `Everything reports ${payload.total} matching ${noun} for "${payload.search}".`;
+  const text = `Everything reports ${payload.total} matching ${noun} for "${payload.search}".`;
+  return warning ? `${warning}\n${text}` : text;
 }
 
 async function handleStatus() {
@@ -493,8 +575,13 @@ async function handleRecent(args) {
   // last1days 77,908 -> last7days 214,015 -> last14days 289,978 -> last30days 417,686.
   const dateTerm = days <= 1 ? "dm:today" : `dm:last${days}days`;
 
-  const query = [args.query, dateTerm].filter((part) => part && part.length > 0).join(" ");
+  // `file:` keeps directories out of a list this tool describes as files — and it
+  // filters inside the index, so paging stays honest (see handleSearch).
+  const query = ["file:", args.query, dateTerm]
+    .filter((part) => part && part.length > 0)
+    .join(" ");
 
+  const warning = await indexWarning();
   const payload = requireOk(await bridge.request({
     cmd: "search",
     search: query,
@@ -502,7 +589,7 @@ async function handleRecent(args) {
     sort: "date_modified_desc",
     fields: ["all"],
   }));
-  return summarize(payload, `Recently modified (${dateTerm}; query "${query}")`);
+  return summarize(payload, `Recently modified (${dateTerm}; query "${query}")`, warning);
 }
 
 async function handleDuplicates(args) {
@@ -530,8 +617,11 @@ async function handleDuplicates(args) {
     .sort((a, b) => b[1].length - a[1].length)
     .slice(0, Math.min(Math.max(args.maxNames ?? 20, 1), 200));
 
+  const warning = await indexWarning();
+  const lead = warning ? `${warning}\n` : "";
+
   if (groups.length === 0) {
-    return `No duplicate file names found (scanned ${payload.results.length} of ${payload.total} ` +
+    return lead + `No duplicate file names found (scanned ${payload.results.length} of ${payload.total} ` +
       `matching rows, minimum ${minCopies} copies).`;
   }
 
@@ -547,7 +637,7 @@ async function handleDuplicates(args) {
     lines.push(`\nNote: only the first ${payload.results.length} of ${payload.total} matching rows were ` +
       "scanned; narrow the query or raise maxScan for a complete picture.");
   }
-  return lines.join("\n");
+  return lead + lines.join("\n");
 }
 
 const HANDLERS = {
@@ -576,8 +666,9 @@ function sendError(id, code, message) {
 }
 
 const INSTRUCTIONS =
-  "Everything indexes file and folder names across all local volumes and answers queries in " +
-  "milliseconds.\n\n" +
+  "Everything indexes file and folder names on the volumes it has been told to index, and answers " +
+  "name queries immediately. Results are paths and metadata only, never file contents, and an empty " +
+  "result means 'not in the current index', not 'does not exist'.\n\n" +
   "FILE LOCATION IS THIS SERVER'S JOB. When the user asks where a file is, when you need to find " +
   "files by name, extension, size, or date, or when the target may be outside the working " +
   "directory, call everything_search FIRST — before glob, before any shell command, before " +
@@ -697,28 +788,122 @@ function shutdown() {
 
 // ---------------------------------------------------------------- CLI mode
 
+const CLI_SORTS = [
+  "name_asc", "name_desc", "path_asc", "path_desc", "size_asc", "size_desc",
+  "ext_asc", "ext_desc", "date_modified_asc", "date_modified_desc",
+  "date_created_asc", "date_created_desc", "date_accessed_asc", "date_accessed_desc",
+  "runcount_asc", "runcount_desc",
+];
+
+const CLI_USAGE = [
+  "usage: everything-mcp.mjs [status | search <query> [options]]",
+  "",
+  "  --max N         rows to fetch, 1-1000 (default 20)",
+  "  --offset N      skip N rows (default 0)",
+  `  --sort NAME     ${CLI_SORTS.join(", ")}`,
+  "  --regex         treat <query> as a regular expression",
+  "  --match-case    case-sensitive matching",
+  "  --whole-word    whole-word matching",
+  "  --match-path    match the full path instead of the file name",
+  "  --files-only    files only",
+  "  --folders-only  folders only",
+].join("\n");
+
+function cliError(message) {
+  process.stderr.write(`${message}\n\n${CLI_USAGE}\n`);
+  process.exitCode = 2;
+}
+
 async function runCli(argv) {
   const command = argv[0] ?? "status";
+
   if (command === "status") {
+    if (argv.length > 1) {
+      cliError(`status takes no arguments, got: ${argv.slice(1).join(" ")}`);
+      return;
+    }
     process.stdout.write(`${await handleStatus()}\n`);
     bridge.stop();
     return;
   }
-  if (command === "search") {
-    const query = argv[1] ?? "";
-    const maxFlag = argv.indexOf("--max");
-    const sortFlag = argv.indexOf("--sort");
-    const text = await handleSearch({
-      query,
-      max: maxFlag >= 0 ? Number(argv[maxFlag + 1]) : 20,
-      sort: sortFlag >= 0 ? argv[sortFlag + 1] : "name_asc",
-    });
-    process.stdout.write(`${text}\n`);
-    bridge.stop();
+
+  if (command !== "search") {
+    cliError(`unknown command "${command}"`);
     return;
   }
-  process.stderr.write("usage: mcp-server.mjs [status | search <query> [--max N] [--sort S]]\n");
-  process.exitCode = 2;
+
+  // Every flag the MCP tool accepts is accepted here too, and nothing else. A
+  // silently dropped flag changes what the query means while still printing a
+  // normal-looking result, which is worse than refusing to run.
+  const args = { query: "", max: 20 };
+  const positional = [];
+
+  for (let i = 1; i < argv.length; i += 1) {
+    const token = argv[i];
+    if (!token.startsWith("--")) {
+      positional.push(token);
+      continue;
+    }
+
+    const takeValue = () => {
+      const value = argv[i + 1];
+      if (value === undefined || value.startsWith("--")) {
+        cliError(`${token} needs a value`);
+        return null;
+      }
+      i += 1;
+      return value;
+    };
+
+    switch (token) {
+      case "--max":
+      case "--offset": {
+        const raw = takeValue();
+        if (raw === null) return;
+        const value = Number(raw);
+        const min = token === "--max" ? 1 : 0;
+        const max = token === "--max" ? 1000 : Number.MAX_SAFE_INTEGER;
+        if (!Number.isInteger(value) || value < min || value > max) {
+          cliError(`${token} must be an integer ${min}-${max}, got "${raw}"`);
+          return;
+        }
+        args[token.slice(2)] = value;
+        break;
+      }
+      case "--sort": {
+        const raw = takeValue();
+        if (raw === null) return;
+        if (!CLI_SORTS.includes(raw)) {
+          cliError(`unknown sort "${raw}"`);
+          return;
+        }
+        args.sort = raw;
+        break;
+      }
+      case "--regex": args.regex = true; break;
+      case "--match-case": args.matchCase = true; break;
+      case "--whole-word": args.wholeWord = true; break;
+      case "--match-path": args.matchPath = true; break;
+      case "--files-only": args.filesOnly = true; break;
+      case "--folders-only": args.foldersOnly = true; break;
+      default:
+        cliError(`unknown option "${token}"`);
+        return;
+    }
+  }
+
+  if (positional.length > 1) {
+    cliError(`unexpected argument${positional.length > 2 ? "s" : ""}: ${positional.slice(1).join(" ")}`);
+    return;
+  }
+
+  args.query = positional[0] ?? "";
+  // The MCP surface caps a page at 300 rows because those rows land in the model's
+  // context. CLI output goes to a terminal or a file, so it keeps the wider page
+  // and is never character-clamped.
+  const text = await handleSearch(args, { maxCap: 1000 });
+  process.stdout.write(`${text}\n`);
+  bridge.stop();
 }
 
 const isMain = process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1];
