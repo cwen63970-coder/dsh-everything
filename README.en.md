@@ -9,7 +9,7 @@
 **Locate any indexed file or folder in one query — paths and metadata only, no content reads, no writes.**
 
 [![build](https://github.com/cwen63970-coder/dsh-everything-mcp/actions/workflows/build.yml/badge.svg)](https://github.com/cwen63970-coder/dsh-everything-mcp/actions/workflows/build.yml)
-[![release](https://img.shields.io/badge/release-v0.1.0-2f6feb?style=flat-square)](https://github.com/cwen63970-coder/dsh-everything-mcp/releases)
+[![release](https://img.shields.io/github/v/release/cwen63970-coder/dsh-everything-mcp?style=flat-square&color=2f6feb&label=release)](https://github.com/cwen63970-coder/dsh-everything-mcp/releases)
 [![platform](https://img.shields.io/badge/platform-Windows%2010%2F11-0078D6?style=flat-square&logo=windows&logoColor=white)](#requirements)
 [![DSH](https://img.shields.io/badge/DSH-%E2%89%A5%200.2.2--rc.1-4B32C3?style=flat-square)](#requirements)
 [![MCP tools](https://img.shields.io/badge/MCP-5%20tools-orange?style=flat-square)](#what-it-does)
