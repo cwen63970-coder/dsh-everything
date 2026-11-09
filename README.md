@@ -2,7 +2,7 @@
 
 **简体中文** · [English](README.en.md) · [繁體中文](README.zh-TW.md)
 
-# dsh-everything
+# dsh-everything-mcp
 
 ### 把 Everything 的文件名索引接进 DeepSeek Harness 的只读检索插件。
 
@@ -27,7 +27,7 @@
 
 <div align="center">
 <br />
-<img src="assets/hero.png" alt="dsh-everything：Everything 搜索结果与 agent 的工具调用" width="100%" />
+<img src="assets/hero.png" alt="dsh-everything-mcp：Everything 搜索结果与 agent 的工具调用" width="100%" />
 <br />
 </div>
 
@@ -58,7 +58,13 @@ plugin_manager install_bundle   target=github:cwen63970-coder/dsh-everything-mcp
 ## 运行前提
 
 1. Windows 10/11；
-2. Everything 已安装并正在运行——索引归它所有。推荐在 **工具 → 选项 → 常规** 里设为这样：
+2. Everything 已安装并正在运行——索引归它所有。
+
+   还没装的话，从官网下载安装版：<https://www.voidtools.com/zh-cn/downloads/>（64 位系统选文件名带 `x64`
+   的那个，32 位系统选不带 `x64` 的），一路默认装完即可。启动后托盘出现它的图标就说明在运行，索引由它自己建，
+   能搜到文件就算就绪——本插件只是查询方，不需要为它做任何配置。本插件在 `Everything 1.4.1.1032` 上实测。
+
+   推荐在 **工具 → 选项 → 常规** 里设为这样：
    - **Everything 服务**：勾选（首次勾选会请求一次管理员权限，用来装服务）
    - **随系统自启动**：勾选
    - **以管理员身份运行**：不勾选

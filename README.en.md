@@ -2,7 +2,7 @@
 
 [简体中文](README.md) · **English** · [繁體中文](README.zh-TW.md)
 
-# dsh-everything
+# dsh-everything-mcp
 
 ### Everything's filename index, exposed to DeepSeek Harness as a read-only lookup plugin.
 
@@ -27,7 +27,7 @@
 
 <div align="center">
 <br />
-<img src="assets/hero.png" alt="dsh-everything: Everything search results and the agent's tool call" width="100%" />
+<img src="assets/hero.png" alt="dsh-everything-mcp: Everything search results and the agent's tool call" width="100%" />
 <br />
 </div>
 
@@ -59,7 +59,15 @@ plugin_manager install_bundle   target=github:cwen63970-coder/dsh-everything-mcp
 ## Requirements
 
 1. Windows 10/11.
-2. Everything installed and running — it owns the index. Recommended settings under **Tools → Options → General**:
+2. Everything installed and running — it owns the index.
+
+   If it is not installed yet, get the installer from the official site:
+   <https://www.voidtools.com/downloads/> (pick the build with `x64` in the filename on 64-bit Windows, the one
+   without it on 32-bit). The defaults are fine. Once the tray icon shows up Everything is running and building the
+   index by itself; being able to search means it is ready — this plugin only queries it and needs no setup of its
+   own. Measured against `Everything 1.4.1.1032`.
+
+   Recommended settings under **Tools → Options → General**:
    - **Everything Service**: ticked (ticking it asks for elevation once, to install the service)
    - **Run on system startup**: ticked
    - **Run as administrator**: unticked

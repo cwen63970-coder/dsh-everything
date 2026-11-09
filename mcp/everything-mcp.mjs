@@ -67,7 +67,7 @@ class Bridge {
       if (process.platform !== "win32") {
         reject(new Error(
           `Everything (voidtools) only runs on Windows, so this MCP server has nothing to query ` +
-          `on ${process.platform}. Disable the dsh-everything plugin on this machine.`,
+          `on ${process.platform}. Disable the dsh-everything-mcp plugin on this machine.`,
         ));
         return;
       }

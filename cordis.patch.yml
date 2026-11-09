@@ -1,4 +1,4 @@
-# dsh-everything — bundle patch.
+# dsh-everything-mcp — bundle patch.
 #
 # 纯配置 bundle：不导出 Host 插件、不导出客户端代码，只把已经装好的
 # @deepseek-ai/dsh-mcp-client 挂上，指向本包自带的 mcp/everything-mcp.mjs。
