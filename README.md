@@ -8,8 +8,8 @@
 
 **一次查询定位已索引的文件或文件夹——返回路径与元数据，不读内容、不改文件。**
 
-[![build](https://github.com/cwen63970-coder/dsh-everything/actions/workflows/build.yml/badge.svg)](https://github.com/cwen63970-coder/dsh-everything/actions/workflows/build.yml)
-[![release](https://img.shields.io/badge/release-v0.1.0-2f6feb?style=flat-square)](https://github.com/cwen63970-coder/dsh-everything/releases)
+[![build](https://github.com/cwen63970-coder/dsh-everything-mcp/actions/workflows/build.yml/badge.svg)](https://github.com/cwen63970-coder/dsh-everything-mcp/actions/workflows/build.yml)
+[![release](https://img.shields.io/badge/release-v0.1.0-2f6feb?style=flat-square)](https://github.com/cwen63970-coder/dsh-everything-mcp/releases)
 [![platform](https://img.shields.io/badge/platform-Windows%2010%2F11-0078D6?style=flat-square&logo=windows&logoColor=white)](#运行前提)
 [![DSH](https://img.shields.io/badge/DSH-%E2%89%A5%200.2.2--rc.1-4B32C3?style=flat-square)](#运行前提)
 [![MCP tools](https://img.shields.io/badge/MCP-5%20tools-orange?style=flat-square)](#它的作用)
@@ -17,7 +17,7 @@
 
 [安装](#安装) · [运行前提](#运行前提) · [它的作用](#它的作用) · [能力边界](#能力边界) · [工作原理](#工作原理) · [查询语法](#查询语法) · [疑难排解](#疑难排解)
 
-<code>插件 → 安装第三方插件：https://github.com/cwen63970-coder/dsh-everything</code>
+<code>插件 → 安装第三方插件：https://github.com/cwen63970-coder/dsh-everything-mcp</code>
 
 </div>
 
@@ -38,11 +38,11 @@
 在 DSH 里打开 **插件 → 安装第三方插件**，在「添加插件」的「包名或地址」里填仓库地址：
 
 ```text
-https://github.com/cwen63970-coder/dsh-everything
+https://github.com/cwen63970-coder/dsh-everything-mcp
 ```
 
-也可以填简写 `github:cwen63970-coder/dsh-everything`（这一栏同时接受 npm 包名和本地目录），然后点「安装」。
-装完在「已安装插件」里会看到 `dsh-everything`，5 个 `mcp__everything__*` 工具立即可用——插件的 patch 会自己
+也可以填简写 `github:cwen63970-coder/dsh-everything-mcp`（这一栏同时接受 npm 包名和本地目录），然后点「安装」。
+装完在「已安装插件」里会看到 `dsh-everything-mcp`，5 个 `mcp__everything__*` 工具立即可用——插件的 patch 会自己
 插入 mcp-client 那条配置、算出包内服务端的绝对路径，不需要重启。
 
 > [!NOTE]
@@ -52,7 +52,7 @@ https://github.com/cwen63970-coder/dsh-everything
 习惯用命令的话，等价写法是：
 
 ```text
-plugin_manager install_bundle   target=github:cwen63970-coder/dsh-everything
+plugin_manager install_bundle   target=github:cwen63970-coder/dsh-everything-mcp
 ```
 
 ## 运行前提
@@ -138,7 +138,7 @@ Node 的机器也能用。
 |---|---|
 | `Everything is not running` | 启动 Everything；索引归它所有 |
 | 某个盘、U 盘或网络位置搜不到 | 都在 **工具 → 选项** 里改。默认只索引本地 NTFS 固定卷：NTFS 格式的 U 盘/移动硬盘 →「索引 → NTFS」勾「自动包含新增的可移动卷」；FAT 格式（exFAT / FAT32）→「索引 → 文件夹」把盘符加进去（Everything 1.5 则在「索引 → FAT」里勾同样的选项）；网络位置 → 同样走「索引 → 文件夹」 |
-| 工具完全不出现 | 先看 `everything_status`；再确认「插件 → 已安装插件」里有 `dsh-everything` |
+| 工具完全不出现 | 先看 `everything_status`；再确认「插件 → 已安装插件」里有 `dsh-everything-mcp` |
 | 刚建的文件搜不到 | 先确认该卷在索引里、且勾了「监控变化」（非 NTFS 与网络位置要单独添加）；Everything 正在重建索引时也查不到，等 `index loaded: true`；仍不行则执行 `Everything.exe -reindex` |
 | 查询超时、报 `no reply` | Everything 正在重建索引，还没加载完（`everything_status` 里 `index loaded: false`）；等它加载完再查 |
 

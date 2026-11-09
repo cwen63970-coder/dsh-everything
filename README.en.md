@@ -8,8 +8,8 @@
 
 **Locate any indexed file or folder in one query — paths and metadata only, no content reads, no writes.**
 
-[![build](https://github.com/cwen63970-coder/dsh-everything/actions/workflows/build.yml/badge.svg)](https://github.com/cwen63970-coder/dsh-everything/actions/workflows/build.yml)
-[![release](https://img.shields.io/badge/release-v0.1.0-2f6feb?style=flat-square)](https://github.com/cwen63970-coder/dsh-everything/releases)
+[![build](https://github.com/cwen63970-coder/dsh-everything-mcp/actions/workflows/build.yml/badge.svg)](https://github.com/cwen63970-coder/dsh-everything-mcp/actions/workflows/build.yml)
+[![release](https://img.shields.io/badge/release-v0.1.0-2f6feb?style=flat-square)](https://github.com/cwen63970-coder/dsh-everything-mcp/releases)
 [![platform](https://img.shields.io/badge/platform-Windows%2010%2F11-0078D6?style=flat-square&logo=windows&logoColor=white)](#requirements)
 [![DSH](https://img.shields.io/badge/DSH-%E2%89%A5%200.2.2--rc.1-4B32C3?style=flat-square)](#requirements)
 [![MCP tools](https://img.shields.io/badge/MCP-5%20tools-orange?style=flat-square)](#what-it-does)
@@ -17,7 +17,7 @@
 
 [Install](#install) · [Requirements](#requirements) · [What it does](#what-it-does) · [Limits](#limits) · [How it works](#how-it-works) · [Query gotchas](#query-gotchas) · [Troubleshooting](#troubleshooting)
 
-<code>Plugins → Install a third-party plugin: https://github.com/cwen63970-coder/dsh-everything</code>
+<code>Plugins → Install a third-party plugin: https://github.com/cwen63970-coder/dsh-everything-mcp</code>
 
 </div>
 
@@ -38,11 +38,11 @@
 In DSH open **Plugins → Install a third-party plugin**, then put the repository URL into **Add plugin**:
 
 ```text
-https://github.com/cwen63970-coder/dsh-everything
+https://github.com/cwen63970-coder/dsh-everything-mcp
 ```
 
-`github:cwen63970-coder/dsh-everything` works as well — the same field also takes an npm package name or a local
-directory. Click **Install**. `dsh-everything` then appears under *Installed plugins*, and the five
+`github:cwen63970-coder/dsh-everything-mcp` works as well — the same field also takes an npm package name or a local
+directory. Click **Install**. `dsh-everything-mcp` then appears under *Installed plugins*, and the five
 `mcp__everything__*` tools are available immediately: the patch inserts the mcp-client row itself and resolves its
 own server path inside the profile, so nothing needs a restart.
 
@@ -53,7 +53,7 @@ own server path inside the profile, so nothing needs a restart.
 From the command line the equivalent is:
 
 ```text
-plugin_manager install_bundle   target=github:cwen63970-coder/dsh-everything
+plugin_manager install_bundle   target=github:cwen63970-coder/dsh-everything-mcp
 ```
 
 ## Requirements
@@ -146,7 +146,7 @@ GUI — with the GUI's regex mode on, plugin queries are still parsed as ordinar
 |---|---|
 | `Everything is not running` | Start Everything; it owns the index |
 | A drive, USB disk or network location returns nothing | All of it lives under **Tools → Options**. Only local fixed NTFS volumes are indexed by default: NTFS USB disks → **Index → NTFS**, tick *Automatically include new removable volumes*; FAT (exFAT / FAT32) → **Index → Folders**, add the drive letter (on Everything 1.5 tick the same option under **Index → FAT**); network locations → **Index → Folders** as well |
-| Tools missing entirely | Check `everything_status`; confirm *Plugins → Installed plugins* lists `dsh-everything` |
+| Tools missing entirely | Check `everything_status`; confirm *Plugins → Installed plugins* lists `dsh-everything-mcp` |
 | Empty results for a file you just created | Check that the volume is indexed and **Monitor changes** is ticked (non-NTFS and network locations must be added separately); while Everything is rebuilding its index the file is not there either — wait for `index loaded: true`; otherwise run `Everything.exe -reindex` |
 | A query times out with `no reply` | Everything is still rebuilding its index (`index loaded: false` in `everything_status`); wait for it to finish |
 

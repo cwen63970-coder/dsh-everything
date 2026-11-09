@@ -17,14 +17,16 @@
 //   node everything-mcp.mjs search <query> [options]   (see the usage text below)
 
 import { spawn } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, realpathSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const BRIDGE = join(HERE, "everything-ipc.exe");
 const SERVER_NAME = "everything";
-const SERVER_VERSION = "1.0.0";
+// Keep in step with package.json; the loader spawns this file from node_modules, so
+// nothing here can read the package manifest reliably at runtime.
+const SERVER_VERSION = "0.1.1";
 
 const SORTS = [
   "name_asc", "name_desc",
@@ -906,7 +908,20 @@ async function runCli(argv) {
   bridge.stop();
 }
 
-const isMain = process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1];
+// Compare real paths: the loader spawns this file through a node_modules symlink, so
+// argv[1] and import.meta.url differ textually while pointing at the same file. Without
+// this, a CLI invocation through node_modules would silently start a stdio server.
+function isEntryPoint() {
+  const self = fileURLToPath(import.meta.url);
+  if (!process.argv[1]) return false;
+  try {
+    return realpathSync(process.argv[1]) === realpathSync(self);
+  } catch {
+    return process.argv[1] === self;
+  }
+}
+
+const isMain = isEntryPoint();
 if (isMain && process.argv.length > 2) {
   runCli(process.argv.slice(2)).catch((error) => {
     process.stderr.write(`[everything] ${error.message}\n`);

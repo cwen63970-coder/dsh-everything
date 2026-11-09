@@ -8,8 +8,8 @@
 
 **一次查詢定位已索引的檔案或資料夾——回傳路徑與中繼資料，不讀內容、不改檔案。**
 
-[![build](https://github.com/cwen63970-coder/dsh-everything/actions/workflows/build.yml/badge.svg)](https://github.com/cwen63970-coder/dsh-everything/actions/workflows/build.yml)
-[![release](https://img.shields.io/badge/release-v0.1.0-2f6feb?style=flat-square)](https://github.com/cwen63970-coder/dsh-everything/releases)
+[![build](https://github.com/cwen63970-coder/dsh-everything-mcp/actions/workflows/build.yml/badge.svg)](https://github.com/cwen63970-coder/dsh-everything-mcp/actions/workflows/build.yml)
+[![release](https://img.shields.io/badge/release-v0.1.0-2f6feb?style=flat-square)](https://github.com/cwen63970-coder/dsh-everything-mcp/releases)
 [![platform](https://img.shields.io/badge/platform-Windows%2010%2F11-0078D6?style=flat-square&logo=windows&logoColor=white)](#執行前提)
 [![DSH](https://img.shields.io/badge/DSH-%E2%89%A5%200.2.2--rc.1-4B32C3?style=flat-square)](#執行前提)
 [![MCP tools](https://img.shields.io/badge/MCP-5%20tools-orange?style=flat-square)](#它的作用)
@@ -17,7 +17,7 @@
 
 [安裝](#安裝) · [執行前提](#執行前提) · [它的作用](#它的作用) · [能力邊界](#能力邊界) · [運作原理](#運作原理) · [查詢語法](#查詢語法) · [疑難排解](#疑難排解)
 
-<code>外掛 → 安裝第三方外掛：https://github.com/cwen63970-coder/dsh-everything</code>
+<code>外掛 → 安裝第三方外掛：https://github.com/cwen63970-coder/dsh-everything-mcp</code>
 
 </div>
 
@@ -38,11 +38,11 @@
 在 DSH 裡打開 **外掛 → 安裝第三方外掛**，在「新增外掛」的「套件名稱或位址」填入倉庫網址：
 
 ```text
-https://github.com/cwen63970-coder/dsh-everything
+https://github.com/cwen63970-coder/dsh-everything-mcp
 ```
 
-也可以填簡寫 `github:cwen63970-coder/dsh-everything`（同一欄位也接受 npm 套件名稱與本機目錄），然後按「安裝」。
-裝完後「已安裝外掛」裡會出現 `dsh-everything`，5 個 `mcp__everything__*` 工具立即可用——外掛的 patch 會自行
+也可以填簡寫 `github:cwen63970-coder/dsh-everything-mcp`（同一欄位也接受 npm 套件名稱與本機目錄），然後按「安裝」。
+裝完後「已安裝外掛」裡會出現 `dsh-everything-mcp`，5 個 `mcp__everything__*` 工具立即可用——外掛的 patch 會自行
 插入 mcp-client 設定、算出套件內伺服器的絕對路徑，不需要重新啟動。
 
 > [!NOTE]
@@ -52,7 +52,7 @@ https://github.com/cwen63970-coder/dsh-everything
 習慣用指令的話，等價寫法是：
 
 ```text
-plugin_manager install_bundle   target=github:cwen63970-coder/dsh-everything
+plugin_manager install_bundle   target=github:cwen63970-coder/dsh-everything-mcp
 ```
 
 ## 執行前提
@@ -138,7 +138,7 @@ Node 的機器也能使用。
 |---|---|
 | `Everything is not running` | 啟動 Everything；索引歸它所有 |
 | 某個磁碟、隨身碟或網路位置搜不到 | 都在 **工具 → 選項** 裡改。預設只索引本機 NTFS 固定磁碟區：NTFS 格式的隨身碟／行動硬碟 →「索引 → NTFS」勾「自動包含新增的可移動卷」；FAT 格式（exFAT / FAT32）→「索引 → 資料夾」把磁碟機代號加進去（Everything 1.5 則在「索引 → FAT」勾同樣的選項）；網路位置 → 同樣走「索引 → 資料夾」 |
-| 工具完全不出現 | 先看 `everything_status`；再確認「外掛 → 已安裝外掛」裡有 `dsh-everything` |
+| 工具完全不出現 | 先看 `everything_status`；再確認「外掛 → 已安裝外掛」裡有 `dsh-everything-mcp` |
 | 剛建立的檔案搜不到 | 先確認該磁碟區在索引裡、且勾了「監控變更」（非 NTFS 與網路位置要單獨加入）；Everything 正在重建索引時也查不到，等 `index loaded: true`；仍不行則執行 `Everything.exe -reindex` |
 | 查詢逾時、回報 `no reply` | Everything 正在重建索引，還沒載入完成（`everything_status` 裡 `index loaded: false`）；等它載入完再查 |
 

@@ -1,5 +1,5 @@
 {
-  "name": "dsh-everything",
+  "name": "dsh-everything-mcp",
   "version": "0.1.1",
   "description": "Everything (voidtools) filename search for DeepSeek Harness — a Windows-only MCP bundle.",
   "type": "module",
@@ -34,11 +34,11 @@
   "author": "cwen63970-coder",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/cwen63970-coder/dsh-everything.git"
+    "url": "git+https://github.com/cwen63970-coder/dsh-everything-mcp.git"
   },
-  "homepage": "https://github.com/cwen63970-coder/dsh-everything#readme",
+  "homepage": "https://github.com/cwen63970-coder/dsh-everything-mcp#readme",
   "bugs": {
-    "url": "https://github.com/cwen63970-coder/dsh-everything/issues"
+    "url": "https://github.com/cwen63970-coder/dsh-everything-mcp/issues"
   },
   "engines": {
     "node": ">=20",

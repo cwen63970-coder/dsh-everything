@@ -15,7 +15,7 @@
 # ── 挂载 ─────────────────────────────────────────────────────────────────────
 # 路径是唯一的技术点：patch 是静态 YAML，而 args 需要绝对路径。
 # Loader 的 !!js 表达式以 profile 目录（ctx.baseUrl）为锚点求值，因此可以拼出
-# node_modules/dsh-everything/mcp/...，不写死任何用户路径。
+# node_modules/dsh-everything-mcp/mcp/...，不写死任何用户路径。
 #   - 表达式里不能出现 ": "（冒号+空格），YAML 会当成映射分隔符。
 #   - pathname 在 Windows 上是 /C:/... 形式，用 replace 剥掉前导斜杠。
 # command 用 process.execPath（DeepSeek Harness 自己）配 ELECTRON_RUN_AS_NODE=1：
@@ -34,5 +34,5 @@
         env:
           ELECTRON_RUN_AS_NODE: '1'
         args:
-          - !!js '(() => { const p = decodeURIComponent(new URL("node_modules/dsh-everything/mcp/everything-mcp.mjs", ctx.baseUrl).pathname); return p.replace(/^\/(?=[A-Za-z]:)/, ""); })()'
+          - !!js '(() => { const p = decodeURIComponent(new URL("node_modules/dsh-everything-mcp/mcp/everything-mcp.mjs", ctx.baseUrl).pathname); return p.replace(/^\/(?=[A-Za-z]:)/, ""); })()'
         toolCallTimeoutMs: 120000
