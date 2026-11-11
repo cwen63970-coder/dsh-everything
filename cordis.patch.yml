@@ -1,4 +1,4 @@
-# dsh-everything-mcp — bundle patch.
+# @xhtzlc/dsh-everything-mcp — bundle patch.
 #
 # 纯配置 bundle：不导出 Host 插件、不导出客户端代码，只把已经装好的
 # @deepseek-ai/dsh-mcp-client 挂上，指向本包自带的 mcp/everything-mcp.mjs。
@@ -15,9 +15,13 @@
 # ── 挂载 ─────────────────────────────────────────────────────────────────────
 # 路径是唯一的技术点：patch 是静态 YAML，而 args 需要绝对路径。
 # Loader 的 !!js 表达式以 profile 目录（ctx.baseUrl）为锚点求值，因此可以拼出
-# node_modules/dsh-everything-mcp/mcp/...，不写死任何用户路径。
+# node_modules/<包名>/mcp/...，不写死任何用户路径。
 #   - 表达式里不能出现 ": "（冒号+空格），YAML 会当成映射分隔符。
 #   - pathname 在 Windows 上是 /C:/... 形式，用 replace 剥掉前导斜杠。
+# 包名带 scope（npm 上的 dsh-everything-mcp 已被他人占用，改用 @xhtzlc/ 前缀），
+# 装进 node_modules 的目录名就是 "@xhtzlc/dsh-everything-mcp"。表达式按顺序探测两个
+# 候选目录（带 scope / 不带 scope），命中即用；两者都不在时返回带 scope 的那个，
+# 让错误信息落在正确的路径上。fs 取自 process.getBuiltinModule，同步、无需 import。
 # command 用 process.execPath（DeepSeek Harness 自己）配 ELECTRON_RUN_AS_NODE=1：
 # Electron 可执行文件随即变成 Node 运行时，插件不依赖用户 PATH 里有没有 node。
 - insert:
@@ -34,5 +38,5 @@
         env:
           ELECTRON_RUN_AS_NODE: '1'
         args:
-          - !!js '(() => { const p = decodeURIComponent(new URL("node_modules/dsh-everything-mcp/mcp/everything-mcp.mjs", ctx.baseUrl).pathname); return p.replace(/^\/(?=[A-Za-z]:)/, ""); })()'
+          - !!js '(function () { var fs = process.getBuiltinModule && process.getBuiltinModule("node:fs"); var dir = decodeURIComponent(new URL(".", ctx.baseUrl).pathname).replace(/^\/(?=[A-Za-z]:)/, ""); var names = ["@xhtzlc/dsh-everything-mcp", "dsh-everything-mcp"]; if (fs) { for (var i = 0; i < names.length; i++) { var p = dir + "node_modules/" + names[i] + "/mcp/everything-mcp.mjs"; if (fs.existsSync(p)) return p } } return dir + "node_modules/" + names[0] + "/mcp/everything-mcp.mjs" })()'
         toolCallTimeoutMs: 120000

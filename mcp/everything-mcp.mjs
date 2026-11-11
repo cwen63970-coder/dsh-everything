@@ -26,7 +26,7 @@ const BRIDGE = join(HERE, "everything-ipc.exe");
 const SERVER_NAME = "everything";
 // Keep in step with package.json; the loader spawns this file from node_modules, so
 // nothing here can read the package manifest reliably at runtime.
-const SERVER_VERSION = "0.1.1";
+const SERVER_VERSION = "0.1.2";
 
 const SORTS = [
   "name_asc", "name_desc",

@@ -35,15 +35,15 @@
 
 ## 安装
 
-在 DSH 里打开 **插件 → 安装第三方插件**，在「添加插件」的「包名或地址」里填仓库地址：
+在 DSH 里打开 **插件 → 安装第三方插件**，在「添加插件」的「包名或地址」里填 npm 包名：
 
 ```text
-https://github.com/cwen63970-coder/dsh-everything-mcp
+@xhtzlc/dsh-everything-mcp
 ```
 
-也可以填简写 `github:cwen63970-coder/dsh-everything-mcp`（这一栏同时接受 npm 包名和本地目录），然后点「安装」。
-装完在「已安装插件」里会看到 `dsh-everything-mcp`，5 个 `mcp__everything__*` 工具立即可用——插件的 patch 会自己
-插入 mcp-client 那条配置、算出包内服务端的绝对路径，不需要重启。
+也可以填仓库地址 `github:cwen63970-coder/dsh-everything-mcp`——这一栏同时接受 npm 包名、仓库地址和本地目录，
+然后点「安装」。装完在「已安装插件」里会看到 `@xhtzlc/dsh-everything-mcp`，5 个 `mcp__everything__*` 工具立刻
+可用——插件的 patch 会自己插入 mcp-client 那条配置、算出包内服务端的绝对路径，不需要重启。
 
 > [!NOTE]
 > 插件在 manifest 里声明了 `dsh.bundle.platforms: ["win32"]`，Linux / macOS 上宿主会**整体跳过**它，
@@ -52,7 +52,7 @@ https://github.com/cwen63970-coder/dsh-everything-mcp
 习惯用命令的话，等价写法是：
 
 ```text
-plugin_manager install_bundle   target=github:cwen63970-coder/dsh-everything-mcp
+plugin_manager install_bundle   target=@xhtzlc/dsh-everything-mcp
 ```
 
 ## 运行前提

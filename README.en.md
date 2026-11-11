@@ -35,14 +35,14 @@
 
 ## Install
 
-In DSH open **Plugins → Install a third-party plugin**, then put the repository URL into **Add plugin**:
+In DSH open **Plugins → Install a third-party plugin**, then put the npm package name into **Add plugin**:
 
 ```text
-https://github.com/cwen63970-coder/dsh-everything-mcp
+@xhtzlc/dsh-everything-mcp
 ```
 
-`github:cwen63970-coder/dsh-everything-mcp` works as well — the same field also takes an npm package name or a local
-directory. Click **Install**. `dsh-everything-mcp` then appears under *Installed plugins*, and the five
+`github:cwen63970-coder/dsh-everything-mcp` works as well — the same field also takes a repository URL or a local
+directory. Click **Install**. `@xhtzlc/dsh-everything-mcp` then appears under *Installed plugins*, and the five
 `mcp__everything__*` tools are available immediately: the patch inserts the mcp-client row itself and resolves its
 own server path inside the profile, so nothing needs a restart.
 
@@ -53,7 +53,7 @@ own server path inside the profile, so nothing needs a restart.
 From the command line the equivalent is:
 
 ```text
-plugin_manager install_bundle   target=github:cwen63970-coder/dsh-everything-mcp
+plugin_manager install_bundle   target=@xhtzlc/dsh-everything-mcp
 ```
 
 ## Requirements

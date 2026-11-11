@@ -35,15 +35,15 @@
 
 ## 安裝
 
-在 DSH 裡打開 **外掛 → 安裝第三方外掛**，在「新增外掛」的「套件名稱或位址」填入倉庫網址：
+在 DSH 裡打開 **外掛 → 安裝第三方外掛**，在「新增外掛」的「套件名稱或位址」填入 npm 套件名稱：
 
 ```text
-https://github.com/cwen63970-coder/dsh-everything-mcp
+@xhtzlc/dsh-everything-mcp
 ```
 
-也可以填簡寫 `github:cwen63970-coder/dsh-everything-mcp`（同一欄位也接受 npm 套件名稱與本機目錄），然後按「安裝」。
-裝完後「已安裝外掛」裡會出現 `dsh-everything-mcp`，5 個 `mcp__everything__*` 工具立即可用——外掛的 patch 會自行
-插入 mcp-client 設定、算出套件內伺服器的絕對路徑，不需要重新啟動。
+也可以填倉庫位址 `github:cwen63970-coder/dsh-everything-mcp`——同一欄位也接受倉庫網址與本機目錄，然後按「安裝」。
+裝完後「已安裝外掛」裡會出現 `@xhtzlc/dsh-everything-mcp`，5 個 `mcp__everything__*` 工具立即可用——外掛的 patch
+會自行插入 mcp-client 設定、算出套件內伺服器的絕對路徑，不需要重新啟動。
 
 > [!NOTE]
 > 外掛在 manifest 裡宣告了 `dsh.bundle.platforms: ["win32"]`，Linux / macOS 上宿主會**整體略過**它，
@@ -52,7 +52,7 @@ https://github.com/cwen63970-coder/dsh-everything-mcp
 習慣用指令的話，等價寫法是：
 
 ```text
-plugin_manager install_bundle   target=github:cwen63970-coder/dsh-everything-mcp
+plugin_manager install_bundle   target=@xhtzlc/dsh-everything-mcp
 ```
 
 ## 執行前提

@@ -1,6 +1,6 @@
 {
-  "name": "dsh-everything-mcp",
-  "version": "0.1.1",
+  "name": "@xhtzlc/dsh-everything-mcp",
+  "version": "0.1.2",
   "description": "Everything (voidtools) filename search for DeepSeek Harness — a Windows-only MCP bundle.",
   "type": "module",
   "exports": {
@@ -43,6 +43,9 @@
   "engines": {
     "node": ">=20",
     "dsh": ">=0.2.2-rc.1 <0.3.0"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "dsh": {
     "bundle": {
